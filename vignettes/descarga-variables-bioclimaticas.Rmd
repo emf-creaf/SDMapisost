@@ -1,0 +1,171 @@
+---
+title: "Descarga de variables bioclimáticas"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Descarga de variables bioclimáticas}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+## Introducción
+
+La caracterización de la distribución geográfica o nicho potencial espacial de una especie animal o vegetal suele depender, de manera directa o indirecta, de las condiciones climáticas en cada localización (REFERENCIAS). Una temperatura o precipitación más alta o más baja, así como su distribución exacta a lo largo del año, puede favorecer o dificultar los diferentes mecanismos que influencian, por ejemplo, el crecimiento o la reproducción de cada especie, sea animal o vegetal.
+
+Los modelos matemáticos de distribución geográfica potencial de especies basados en datos solamente de presencias, como por ejemplo el modelo MaxEnt que usaremos en este trabajo, utilizan datos históricos de detección de una especie en diversas localizaciones para obtener un mapa de probabilidad de presencia en otras localidades. Estos mapas indican en qué lugares esa especie podría existir potencialmente, dadas las condiciones adecuadas. Sin embargo, los modelos que utilizaremos no tienen en cuenta las barreras (bióticas, geográficas y antropogénicas REFERENCIA!!!) que se oponen a la dispersión de una especie, las cuales podrían impedir la ocupación de todo el nicho potencial. Por ello, es tan solo a partir del nicho efectivo (es decir, la distribución real y medida) que podemos derivar el nicho potencial.
+
+Los modelos mencionados se calibran asumiendo una relación de dependencia de esos datos históricos de presencia con una serie de variables climáticas, topográficas, paisajística, etc. Son estas variables, y su relación con los datos de presencia, las que determinan esas condiciones. En este documento tan solo describiremos cómo obtener las variables climáticas que usaremos en nuestro estudio. La obtención de otras variables está descrita en otros documentos ("vignettes") de este paquete.
+
+## Zona de estudio
+
+La extensión geográfica de este trabajo se encajará dentro de los límites de la Comunidad Autónoma de Madrid. Los polígonos georeferenciados que nos delimitarán esos límites los obtendremos mediante el paquete "mapSpain", que habrá que instalar en caso de que no esté disponibles localmente gracias a una instalación anterior. Igualmente, necesitaremos instalar los paquetes "sf" y "terra", que nos permitirán seleccionar solamente los límites geográficos del mapa original y convertirlo en un objeto del tipo $SpatVector$. La razón por la que preferimos un mapa vectorial de clase $SpatVector$ es que más adelante lo utilizaremos para seleccionar la zona de estudio en mapas ráster de clase $terra$.
+
+```{r Madrid}
+# install.packages("mapSpain", "sf", "terra")
+limites_madrid <- mapSpain::esp_get_ccaa("Madrid", year = "2024",
+                                        epsg = "4258", resolution = "01") |>
+  sf::st_geometry() |>
+  terra::vect()
+```
+
+<br>
+
+## Variables climáticas históricas
+
+Las variables climáticas históricas que usaremos en este trabajo para calibrar los modelos son las que están disponibles en el sitio web <https://www.worldclim.org/>. Se trata de un conjunto de 19 variables con diferentes resoluciones espaciales (entre 1 y 340 km$^2$) que se han obtenido a partir de datos históricos entre los años 1970 y 2000.
+
+El primer paso consistirá en descargar un archivo "zip" que contiene todas las variables climáticas que necesitamos. En el ejemplo que mostramos a continuación se ha escogido una resolución espacial de 10 minutos de arco. Con ello conseguiremos una descarga rápida que nos sirva para ilustrar todos los pasos a seguir. Sin embargo, la resolución espacial más detallada que se ofrece en Worldclim es de 30 segundos de arco y es ese archivo el que deberíamos utilizar en nuestro análisis. En ese caso, el archivo será bastante grande y requerirá algo de tiempo y una buena conexión.
+
+La descarga se realizará directamente a un directorio local de nuestro ordenador. El nombre y la localización exacta de este directorio la debe determinar el usuario. Para nuestro ejemplo hemos usado una carpeta situada directamente en "C:".
+
+
+```{r get_historico_zip, echo = TRUE, eval = TRUE}
+# Modificar la carpeta destino a conveniencia.
+destino <- "C:/imidra/bioclim/historico"
+
+# URL para descargar el zip con todas las variables. Recuerde que la resolución espacial
+# más detallada, y que deberíamos usar en nuestro estudio, es la de 30 segundos de arco.
+# Para descargarla deberemos sustituir el nombre del archivo "wc2.1_10m_bio.zip" por
+# "wc2.1_30s_bio.zip".
+url_hist <- paste0("https://geodata.ucdavis.edu/climate/worldclim/2_1/base/wc2.1_10m_bio.zip")
+
+# Descarga de las variables climáticas y decompresión del archivo zip.
+r <- curl::curl_download(url = url_hist,
+                         destfile = file.path(destino, basename(url_hist)),
+                         quiet = FALSE)
+unzip(file.path(destino, basename(url_hist)),
+      exdir = file.path(destino, tools::file_path_sans_ext(basename(url_hist))))
+file.remove(file.path(destino, basename(url_hist)))
+
+# Bucle para recortar cada ráster a los límites de la CCAA de Madrid.
+carpeta <- file.path(destino, tools::file_path_sans_ext(basename(url_hist)))
+lista_archivos <- list.files(carpeta)
+for (i in lista_archivos) {
+
+  # Leer ráster.
+  r <- terra::rast(file.path(carpeta, i))
+
+  # Reproyectar polígono, pero solo una vez.
+  if (i == lista_archivos[1]) p <- terra::project(limites_madrid, terra::crs(r))
+
+  # Recorta y enmascara el ráster.
+    r <- r |>
+      terra::crop(p, snap = "out") |>
+      terra::mask(p)
+
+  # Guardar en disco con el mismo nombre.
+  terra::writeRaster(r, file.path(carpeta, i), overwrite = TRUE)
+}
+```
+
+## Variables para escenarios climáticos futuros
+
+Una vez que la calibración ha sido llevada a cabo, podemos usar el modelo calibrado para tratar de entender cómo puede variar el nicho potencial de la especie en estudio cuando las condiciones climáticas futuras cambian. En el contexto actual de cambio global, 
+
+Desde la web de WorldClim podemos descargar variables climáticas correspondientes a proyecciones climáticas mundiales realizadas con diferentes modelos y en diferentes escenarios. Aquí <https://www.worldclim.org/data/cmip6/cmip6climate.html> podremos seleccionar la resolución espacial deseada. Con el fin de poder ilustrar cómo podemos realizar la descarga de las variables para todos los escenarios, seleccionaremos la opción "10 minutes". Si entramos en esta opción veremos varias tablas separando los datos en periodos de tiempo bi-decadales (2021-2040, 2041-2060, 2061-2080 y 2081-2100), en escenarios (ssp126,	sp245, ssp370	y ssp585) y en modelos (véase la tabla indicada). Igualmente, tendremos la posibilidad de descargar las variables tn (monthly average minimum temperature, °C), tx (monthly average maximum temperature, °C), pr (monthly total precipitation, mm) y bc (bioclimatic variables). Son estas últimas variables las que nos interesan.
+
+A continuación se muestra cómo descargar las variables climáticas con resolución de 10 minutos de arco para todos los escenarios climáticos, todos los modelos y todos los periodos temporales. Los rásteres descargados se recortarán y enmascararán para ajustarse a los límmites de la CCAA de Madrid y se guardarán en la carpeta creada a continuación pero en una subcarpeta específica. Para llevar a cabo un análisis más preciso se recomienda descargar los datos con resolución de 30 segundos de arco. Para ello habrá que hacer el cambio en el nombre de la variable de texto "url_futuro" y "nombre_raiz".
+
+```{r get_futuro_zip, echo = TRUE, eval = TRUE}
+# Modificar la carpeta destino a conveniencia.
+destino <- "C:/imidra/bioclim/futuro"
+
+# URL raiz para datos con 10 minutos de arco. ¡Cambiar "10m" por "30s".
+url_futuro <- "https://geodata.ucdavis.edu/cmip6/10m/"
+nombre_raiz <- "/wc2.1_10m_bioc_"
+
+# Modelos Global Change Model disponibles. Seleccionaremos tan solo aquellos que
+# tienen completos los 4 escenarios climáticos.
+modelos_GCM <- c("ACCESS-CM2", "BCC-CSM2-MR",
+            "CMCC-ESM2", "EC-Earth3-Veg",
+            "GISS-E2-1-G", "INM-CM5-0", "IPSL-CM6A-LR",
+            "MIROC6", "MPI-ESM1-2-HR", "MRI-ESM2-0", "UKESM1-0-LL")
+
+# Shared Socio-economict Pathways disponibles.
+escenarios_SSP <- c("ssp126", "ssp245", "ssp370", "ssp585")
+
+# Periodos temporales disponibles.
+periodos_temporales <- c("2021-2040", "2041-2060", "2061-2080", "2081-2100")
+
+# Stuff.
+reprojectar <- TRUE
+
+# Bucle de modelos.
+for (modelo in modelos_GCM) {
+
+  # URL origen y carpeta destino.
+  url1 <- paste0(url_futuro, modelo, "/")
+  dest1 <- file.path(destino, modelo)
+  dir.create(dest1, showWarnings = FALSE)
+  
+  # Bucle de escenarios climáticos.
+  for (escenario in escenarios_SSP) {
+
+    # URL origen y carpeta destino
+    url2 <- paste0(url1, escenario, nombre_raiz, modelo, "_", escenario, "_")
+    dest2 <- file.path(destino, modelo, escenario)
+    dir.create(dest2, showWarnings = FALSE)
+
+    # Bucle de periodos temporales.
+    for (periodo in periodos_temporales) {
+
+      # URL origen y carpeta destino.
+      url3 <- paste0(url2, periodo, ".tif")
+      dest3 <- file.path(destino, modelo, escenario, periodo)
+      dir.create(dest3, showWarnings = FALSE)
+      
+      # Descargar las variables climáticas proyectadas y descomprimir el archivo zip resultante.
+      curl::multi_download(url = url3, destfile = file.path(dest3, basename(url3)))
+
+      # Descarga completada.
+      if (!("error" %in% class(r))) {
+        # Leer ráster.
+        r <- terra::rast(file.path(dest3, basename(url3)))
+
+        # Reproyectar polígono, pero solo una vez.
+        if (reprojectar) {
+          p <- terra::project(limites_madrid, terra::crs(r))
+          reprojectar <- FALSE
+        }
+        
+        # Recorta y enmascara el ráster.
+        r <- r |>
+          terra::crop(p, snap = "out") |>
+          terra::mask(p)
+        
+        # Guardar en disco con el mismo nombre.
+        terra::writeRaster(r, file.path(dest3, basename(url3)), overwrite = TRUE)
+      }
+    }
+  }
+}
+```
+
+
+

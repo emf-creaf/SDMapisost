@@ -1,0 +1,107 @@
+---
+title: "Descarga de datos CORINE"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Descarga de datos CORINE}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+
+## Introducción
+
+Los mapas de uso o cubierta del suelo nos informan de cuál es la ocupación del suelo en la zona de estudio. Una cubierta vegetal o agrícola puede ser un hábitat favorable para la presencia de una especie animal o vegetal, pero una cubierta urbana es, probablemente, un hábitat desfavorable. Las cubiertas urbanas incluyen edificios y zonas edificadas en general, así como carreteras y vías de comunicación, que pueden convertirse en barreras para muchas especies. Por ello, es común incluir información sobre usos o cubiertas del suelo en los modelos distribución geográfica potencial de especies (REFERENCES!!).
+
+
+
+
+## Zona de estudio
+
+Como en documentos anteriores, descargaremos los límites geográficos de la CCAA de Madrid para poder recortar y enmascarar el mapa CORINE.
+
+```{r Madrid}
+# install.packages("mapSpain", "sf")
+limites_madrid <- mapSpain::esp_get_ccaa("Madrid", year = "2024",
+                                        epsg = "4258", resolution = "01") |>
+  sf::st_geometry()
+```
+
+
+## Datos CORINE
+
+El primer paso para obtener el mapa CORINE para la CCAA de Madrid consiste en ir a la web del CNIG, <https://centrodedescargas.cnig.es/CentroDescargas/corine-land-cover> y descargar el mapa más reciente, que en nuestro caso es el de 2018, en formato GeoPackage. Obtendremos así un archivo comprimido zip que moveremos a la carpeta "C:/imidra/corine" (u otra carpeta de nuestra elección). Allí descomprimiremos el archivo zip en una carpeta de nuestra elección, que en nuestro caso habremos creado anteriormente con el nombre de "corine_2018".
+
+Una vez hecho esto podemos recortar y enmascarar el mapa para que se ajuste a los límites geográficos de la CCAA de Madrid. Comenzaremos por leer el archivo ".sld" que contiene la leyenda del mapa CORINE en formato XML.
+
+```{r Leyenda, echo = FALSE, eval = FALSE}
+# install.packages(c("xml2", "dplyr"))
+
+# Modificar la carpeta destino a conveniencia.
+destino <- "C:/imidra/corine/corine_2018"
+
+# Extraemos leyenda.
+sld <- xml2::read_xml(file.path(destino, "LEYENDA_CLC.sld"))
+
+
+
+ns <- xml2::xml_ns(leyenda_clc)
+reglas <- xml2::xml_find_all(leyenda_clc, ".//se:Rule")
+
+titles <- xml2::xml_text(
+  xml2::xml_find_all(leyenda_clc, ".//*[local-name()='Title']")
+)
+
+fills <- xml2::xml_text(
+  xml2::xml_find_all(
+    leyenda_clc,
+    ".//*[local-name()='SvgParameter' and @name='fill']"
+  )
+)
+
+```
+
+
+```{r Corine}
+# Modificar la carpeta destino a conveniencia.
+destino <- "C:/imidra/corine/corine_2018"
+
+# Creamos una carpeta 2018.
+dir.create(destino, showWarnings = FALSE)
+
+# Comprobación de cuantas capas tiene el geopackage.
+capas <- sf::st_layers(file.path(destino, "CLC2018_ES.gpkg"))
+
+# Leemos los datos del geopackage.
+a <- sf::st_read(file.path(destino, "CLC2018_ES.gpkg"), layer = "CLC18_ES")
+
+# Cambiamos el "Geometry type" a "MULTIPOLYGONs".
+a <- sf::st_cast(a, "MULTIPOLYGON")
+
+# Reproyectamos "limites_madrid" para que coincida con los del geopackage.
+limites_madrid <- sf::st_transform(limites_madrid, crs = sf::st_crs(a))
+
+#  Recortamos a la zona de estudio. it to Madrid area.
+a <- a |> sf::st_crop(limites_madrid)
+
+# Borramos el contenido del directorio en el que hemos descomprimido el geopackage.
+# No es un paso necesario, pero nos ahorrará espacio en disco.
+unlink(destino, recursive = TRUE)
+
+# Crea el mismo directorio para dar acceso de escritura a sf::st_write.
+dir.create(destino)
+
+# Guarda en el directorio como geopackage.
+sf::st_write(
+  obj = a, 
+  dsn = file.path(destino, "Madrid_CLC2018.gpkg")
+)
+
+# Extraemos y guardamos leyenda y manual.
+```
