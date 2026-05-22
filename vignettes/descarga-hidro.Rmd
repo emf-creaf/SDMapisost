@@ -1,0 +1,41 @@
+---
+title: "Descarga de la red hidrográfica"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Descarga de la red hidrográfica}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+
+```{r Madrid}
+# install.packages("mapSpain", "sf")
+limites_madrid <- mapSpain::esp_get_ccaa("Madrid", year = "2024",
+                                        epsg = "4258", resolution = "01") |>
+  sf::st_geometry() |>
+  terra::vect()
+```
+
+
+```{r descarga_hidro}
+# Modificar la carpeta destino a conveniencia.
+destino <- "C:/imidra/hidro"
+
+# Inspeccionemos las capas que contienen los archivos ".gpkg".
+l1 <- sf::st_layers(file.path(destino, "IGR_HI_v1_ES020_Duero.gpkg"))
+l2 <- sf::st_layers(file.path(destino, "IGR_HI_v1_ES030_Tajo.gpkg"))
+
+# Juntas cuencas Tajo y Duero.
+v1 <- sf::st_read(file.path(destino, "IGR_HI_v1_ES020_Duero.gpkg"),
+                  layer = "hi_cauce_s_es020")
+v2 <- sf::st_read(file.path(destino, "IGR_HI_v1_ES030_Tajo.gpkg"),
+                  layer = "hi_cauce_s_es030")
+hidro <- sf::st_geometry(rbind(v1, v2))
+```

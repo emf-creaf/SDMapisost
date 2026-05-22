@@ -107,7 +107,7 @@ modelos_GCM <- c("ACCESS-CM2", "BCC-CSM2-MR",
             "GISS-E2-1-G", "INM-CM5-0", "IPSL-CM6A-LR",
             "MIROC6", "MPI-ESM1-2-HR", "MRI-ESM2-0", "UKESM1-0-LL")
 
-# Shared Socio-economict Pathways disponibles.
+# Shared Socio-economic Pathways disponibles.
 escenarios_SSP <- c("ssp126", "ssp245", "ssp370", "ssp585")
 
 # Periodos temporales disponibles.
