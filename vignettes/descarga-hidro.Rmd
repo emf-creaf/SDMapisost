@@ -34,8 +34,28 @@ l2 <- sf::st_layers(file.path(destino, "IGR_HI_v1_ES030_Tajo.gpkg"))
 
 # Juntas cuencas Tajo y Duero.
 v1 <- sf::st_read(file.path(destino, "IGR_HI_v1_ES020_Duero.gpkg"),
-                  layer = "hi_cauce_s_es020")
+                  layer = "hi_cauce_s_es020", quiet = TRUE)
 v2 <- sf::st_read(file.path(destino, "IGR_HI_v1_ES030_Tajo.gpkg"),
-                  layer = "hi_cauce_s_es030")
+                  layer = "hi_cauce_s_es030", quiet = TRUE)
 hidro <- sf::st_geometry(rbind(v1, v2))
+```
+
+Transformamos "hidro" para que tenga el mismo sistema de referencia que el MDT.
+
+```{r transforma_hidro}
+carpeta_mdt <- "C:/imidra/mdt"
+mdt <- terra::rast(file.path(carpeta_mdt, "mdt_madrid.tif"))
+hidro <- sf::st_transform(hidro, crs = terra::crs(mdt))
+
+sf::st_write(hidro, file.path(destino, "hidro_madrid.shp"),
+             append = FALSE, quiet = TRUE)
+```
+
+Construimos un ráster de distancias tomando el MDT como referencia. Primero convertimos la red hidrológica en un ráster para acelerar los cálculos.
+
+```{r distancia_hidro}
+hidro <- hidro |> terra::vect()
+hidro_raster <- terra::rasterize(hidro, mdt, fun = min, touches = TRUE)
+distancia_hidro <- terra::distance(hidro_raster)
+terra::writeRaster(distancia_hidro, file.path(destino, "distancia_hidro.tif"))
 ```
