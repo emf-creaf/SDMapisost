@@ -17,3 +17,63 @@ knitr::opts_chunk$set(
 ```{r setup}
 library(SDMapisost)
 ```
+
+
+
+```{r datos_presencia}
+# Habría que usar un archivo con la lista de especies.
+carpeta <- "C:/imidra/"
+nombre_especie <- "Cistus ladanifer"
+p <- datos_especie(file.path(carpeta, "ifn"), nombre_especie) |>
+  sf::st_geometry() |>
+  terra::vect()
+```
+
+
+```{r background}
+# install.packages("mapSpain", "sf")
+b <- mapSpain::esp_get_ccaa("Madrid", year = "2024",
+                            epsg = "4258", resolution = "01") |>
+  sf::st_geometry() |>
+  terra::vect() |>
+  terra::spatSample(size = 10000, method = "random")
+```
+
+Leemos los rásteres con las variables predictoras y extraemos los valores en las localizaciones de las especies. Esto lo hacemos tanto para los valores de presencia como para los puntos de "background".
+
+```{r variables_predictoras}
+# Modelo Digital del Terreno.
+mdt <- terra::rast(file.path(carpeta, "mdt", "mdt_madrid.tif"))
+p <- terra::project(p, terra::crs(mdt))
+p <- cbind(p, terra::extract(mdt, p, ID = FALSE, method = "bilinear"))
+
+b <- terra::project(b, terra::crs(mdt))
+b <- cbind(b, terra::extract(mdt, b, ID = FALSE, method = "bilinear"))
+
+# Variables bioclimáticas. 1 12
+te <- terra::rast(file.path(carpeta, "bioclim/historico/wc2.1_10m_bio", "wc2.1_10m_bio_1.tif"))
+pr <- terra::rast(file.path(carpeta, "bioclim/historico/wc2.1_10m_bio", "wc2.1_10m_bio_12.tif"))
+
+p <- terra::project(p, terra::crs(te))
+p <- cbind(p, terra::extract(te, p, ID = FALSE, method = "bilinear"))
+p <- cbind(p, terra::extract(pr, p, ID = FALSE, method = "bilinear"))
+
+b <- terra::project(b, terra::crs(te))
+b <- cbind(b, terra::extract(te, b, ID = FALSE, method = "bilinear"))
+b <- cbind(b, terra::extract(pr, b, ID = FALSE, method = "bilinear"))
+
+names(p) <- names(b) <- c("mdt", "temp", "prec")
+```
+
+Maxent.
+
+```{r maxent}
+# install.packages("dismo")
+variables <- rbind(terra::values(p), terra::values(b))
+p <- c(rep(1, nrow(p)), rep(0, nrow(b)))
+m <- dismo::maxent(x = variables, p = p)
+```
+
+
+
+

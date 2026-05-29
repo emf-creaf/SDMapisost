@@ -20,3 +20,8 @@ Un objecto "sf" con el contenido de los datos de presencia de la especie.
 \description{
 Title
 }
+\examples{
+carpeta <- "C:/imidra/ifn"
+nombre_especie <- "Cistus ladanifer"
+df <- datos_especie(carpeta, nombre_especie)
+}

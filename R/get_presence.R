@@ -10,6 +10,9 @@
 #' @export
 #'
 #' @examples
+#' carpeta <- "C:/imidra/ifn"
+#' nombre_especie <- "Cistus ladanifer"
+#' df <- datos_especie(carpeta, nombre_especie)
 datos_especie <- function(carpeta, nombre_especie, ifn = 2) {
 
   # Checks.
@@ -45,6 +48,6 @@ datos_especie <- function(carpeta, nombre_especie, ifn = 2) {
                     crs = sf::st_crs(paste0("EPSG:", df$crs[1])))
 
 
-  return(x)
+  return(sf::st_geometry(x))
 
 }
