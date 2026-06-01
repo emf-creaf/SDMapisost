@@ -39,11 +39,16 @@ b <- mapSpain::esp_get_ccaa("Madrid", year = "2024",
   terra::spatSample(size = 10000, method = "random")
 ```
 
+
+Verificamos que los puntos de fondo no caen en zonas incorrectas.
+
+
 Leemos los rásteres con las variables predictoras y extraemos los valores en las localizaciones de las especies. Esto lo hacemos tanto para los valores de presencia como para los puntos de "background".
 
 ```{r variables_predictoras}
 # Modelo Digital del Terreno.
 mdt <- terra::rast(file.path(carpeta, "mdt", "mdt_madrid.tif"))
+
 p <- terra::project(p, terra::crs(mdt))
 p <- cbind(p, terra::extract(mdt, p, ID = FALSE, method = "bilinear"))
 
@@ -51,27 +56,50 @@ b <- terra::project(b, terra::crs(mdt))
 b <- cbind(b, terra::extract(mdt, b, ID = FALSE, method = "bilinear"))
 
 # Variables bioclimáticas. 1 12
-te <- terra::rast(file.path(carpeta, "bioclim/historico/wc2.1_10m_bio", "wc2.1_10m_bio_1.tif"))
-pr <- terra::rast(file.path(carpeta, "bioclim/historico/wc2.1_10m_bio", "wc2.1_10m_bio_12.tif"))
+for (i in 1:19) {
+  biov <- terra::rast(file.path(carpeta, "bioclim/historico/wc2.1_10m_bio",
+                                paste0("wc2.1_10m_bio_", i, ".tif")))
+  if (i == 1) {
+    p <- terra::project(p, terra::crs(biov))
+    b <- terra::project(b, terra::crs(biov))
+  }
+  p <- cbind(p, terra::extract(biov, p, ID = FALSE, method = "bilinear"))
+  b <- cbind(b, terra::extract(biov, b, ID = FALSE, method = "bilinear"))
+}
+names(p) <- names(b) <- c("mdt", paste0("biov", 1:19))
 
-p <- terra::project(p, terra::crs(te))
-p <- cbind(p, terra::extract(te, p, ID = FALSE, method = "bilinear"))
-p <- cbind(p, terra::extract(pr, p, ID = FALSE, method = "bilinear"))
-
-b <- terra::project(b, terra::crs(te))
-b <- cbind(b, terra::extract(te, b, ID = FALSE, method = "bilinear"))
-b <- cbind(b, terra::extract(pr, b, ID = FALSE, method = "bilinear"))
-
-names(p) <- names(b) <- c("mdt", "temp", "prec")
+# 
+# 
+# 
+# 
+# 
+# te <- terra::rast(file.path(carpeta, "bioclim/historico/wc2.1_10m_bio", "wc2.1_10m_bio_1.tif"))
+# pr <- terra::rast(file.path(carpeta, "bioclim/historico/wc2.1_10m_bio", "wc2.1_10m_bio_12.tif"))
+# 
+# p <- terra::project(p, terra::crs(te))
+# p <- cbind(p, terra::extract(te, p, ID = FALSE, method = "bilinear"))
+# p <- cbind(p, terra::extract(pr, p, ID = FALSE, method = "bilinear"))
+# 
+# b <- terra::project(b, terra::crs(te))
+# b <- cbind(b, terra::extract(te, b, ID = FALSE, method = "bilinear"))
+# b <- cbind(b, terra::extract(pr, b, ID = FALSE, method = "bilinear"))
+# 
+# names(p) <- names(b) <- c("mdt", "temp", "prec")
 ```
 
 Maxent.
 
 ```{r maxent}
 # install.packages("dismo")
+np <- nrow(p)
+nb <- nrow(b)
 variables <- rbind(terra::values(p), terra::values(b))
-p <- c(rep(1, nrow(p)), rep(0, nrow(b)))
+p <- c(rep(1, np), rep(0, nb))
 m <- dismo::maxent(x = variables, p = p)
+
+pr <- dismo::predict(m, variables)
+
+kk <- ecospat::ecospat.boyce(pr, pr[1:np], nclass = 0, PEplot = FALSE, method = "pearson")
 ```
 
 
