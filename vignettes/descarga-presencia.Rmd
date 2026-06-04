@@ -99,7 +99,7 @@ m <- dismo::maxent(x = variables, p = p)
 
 pr <- dismo::predict(m, variables)
 
-kk <- ecospat::ecospat.boyce(pr, pr[1:np], nclass = 0, PEplot = FALSE, method = "pearson")
+kk <- ecospat::ecospat.boyce(pr, pr[1:np], nclass = 0, PEplot = TRUE, method = "pearson")
 ```
 
 

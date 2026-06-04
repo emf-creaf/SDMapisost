@@ -1,0 +1,52 @@
+---
+title: "Selección de variables"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Selección de variables}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+```{r setup}
+library(SDMapisost)
+```
+
+
+## Introducción
+
+Para determinar el nicho potencial espacial de una especie en un territorio dado asumimos que existe una dependencia, más o menos compleja, entre la probabilidad de ocupación de la especie y una o varias variables predictoras. Especificado de esta manera, el problema de encontrar ese nicho potencial requiere que encontremos, por una parte, el algoritmo o algoritmos más adecuado para describir esa dependencia, y por otro, que realicemos la selección de un conjunto óptimo de variables que describa el nicho potencia de manera completa y satisfactoria. En general, este segundo paso se realiza a priori mediante el conocimiento experto acumulado de la fenologia y características generales de la especie que estamos estudiando. Sin embargo, no siempre es sencillo escoger las mejores variables.
+
+Al seleccionar las variables predictoras también debemos evitar escoger
+
+La eliminación de variables predictoras poco importantes puede ayudar en el proceso de convergencia de los algoritmos de ajuste.
+
+
+En este trabajo hemos utilizado dos técnicas diferentes para obtener, a partir de un conjunto inicial bastante amplio de variables predictoras, un grupo más reducido de estas.
+
+```{r lectura_variables}
+# install.packages("mapSpain", "sf")
+b <- mapSpain::esp_get_ccaa("Madrid", year = "2024",
+                            epsg = "4258", resolution = "01") |>
+  sf::st_geometry() |>
+  terra::vect() |>
+  terra::spatSample(size = 10000, method = "random")
+
+
+```
+
+
+
+
+
+
+
+
+
+
