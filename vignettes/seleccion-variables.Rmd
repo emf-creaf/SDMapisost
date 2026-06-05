@@ -31,14 +31,72 @@ La eliminación de variables predictoras poco importantes puede ayudar en el pro
 En este trabajo hemos utilizado dos técnicas diferentes para obtener, a partir de un conjunto inicial bastante amplio de variables predictoras, un grupo más reducido de estas.
 
 ```{r lectura_variables}
-# install.packages("mapSpain", "sf")
-b <- mapSpain::esp_get_ccaa("Madrid", year = "2024",
-                            epsg = "4258", resolution = "01") |>
-  sf::st_geometry() |>
-  terra::vect() |>
-  terra::spatSample(size = 10000, method = "random")
+carpeta <- "c:/imidra"
+especie <- "Cistus ladanifer"
+dat <- get_predictors(carpeta, especie, verbose = FALSE)
 
 
+m <- ClustOfVar::hclustvar(X.quanti = as.data.frame(dat[, 1:23]), X.quali = as.data.frame(dat[, 24]))
+stability_m <- ClustOfVar::stability(m, B = 50)
+# plot(stability_m)
+num_clusters <- 10
+tree_cut <- ClustOfVar::cutreevar(m, k = num_clusters)
+print(tree_cut$scores)
+print(tree_cut$var)
+
+# Using subselect.
+df <- as.data.frame(dat[, 1:23])
+cc <- cor(na.omit(df))
+trim <- subselect::trim.matrix(cc)
+cc2 <- trim$trimmedmat
+res1 <- subselect::eleaps(mat = cc2, kmin = 10, kmax = 10)
+print(colnames(df)[res1$bestsets])
+```
+
+```{r kmed}
+# Using kmed.
+dd <- na.omit(df)
+dd2 <- cor(as.matrix(dd), method = "pearson")
+dd3 <- dd2
+gg <- kmed::fastkmed(dd3, ncluster = 10, iterate = 200)
+selected_indices <- gg$medoid
+selected_columns <- colnames(dd)[gg$medoid]
+
+# Separate selected medoids and dropped variables
+selected_vars <- dd[, selected_indices]
+dropped_vars  <- dd[, -selected_indices]
+
+r2_values <- c()
+
+# Loop through each dropped variable and regress it on the selected subset
+for (i in 1:ncol(dropped_vars)) {
+  model <- lm(dropped_vars[, i] ~ ., data = selected_vars)
+  r2_values[i] <- summary(model)$r.squared
+}
+
+# Calculate the mean R-squared across all excluded variables
+mean_r2 <- mean(r2_values)
+cat("Average Variance Explained (Mean R²):", round(mean_r2, 4), "\n")
+print(setNames(r2_values, colnames(dropped_vars)))
+
+# La columna "este" tiene una R2 muy baja. La incluimos en el subset.
+selected_indices <- c(selected_indices, which(colnames(dd) == "este"))
+
+selected_vars <- dd[, selected_indices]
+dropped_vars  <- dd[, -selected_indices]
+r2_values <- c()
+
+# Loop through each dropped variable and regress it on the selected subset
+for (i in 1:ncol(dropped_vars)) {
+  model <- lm(dropped_vars[, i] ~ ., data = selected_vars)
+  r2_values[i] <- summary(model)$r.squared
+}
+
+# Calculate the mean R-squared across all excluded variables
+mean_r2 <- mean(r2_values)
+cat("Average Variance Explained (Mean R²):", round(mean_r2, 4), "\n")
+print(setNames(r2_values, colnames(dropped_vars)))
+print(colnames(dd)[selected_indices])
 ```
 
 

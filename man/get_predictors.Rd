@@ -4,12 +4,14 @@
 \alias{get_predictors}
 \title{Predictor variables at presence locations.}
 \usage{
-get_predictors(carpeta, especie)
+get_predictors(folder, species, verbose = TRUE)
 }
 \arguments{
-\item{carpeta}{\code{character} string}
+\item{folder}{\code{character} string with the root name of the folder with the data.}
 
-\item{especie}{}
+\item{species}{\code{character} string with the full name of the species.}
+
+\item{verbose}{\code{logical}, if TRUE progress information is produced.}
 }
 \value{
 A \code{terra} SpatVector object.
@@ -20,7 +22,7 @@ that are used in the analysis at all presence locations for the input
 species.
 }
 \examples{
-carpeta <- "C:/imidra/"
-nombre_especie <- "Cistus ladanifer"
-df <- get_predictors(carpeta, nombre_especie)
+folder <- "C:/imidra/"
+species <- "Cistus ladanifer"
+x <- get_predictors(folder, species)
 }
