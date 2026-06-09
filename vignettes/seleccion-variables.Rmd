@@ -37,11 +37,22 @@ dat <- get_predictors(carpeta, especie, verbose = FALSE)
 
 
 m <- ClustOfVar::hclustvar(X.quanti = as.data.frame(dat[, 1:23]), X.quali = as.data.frame(dat[, 24]))
-stability_m <- ClustOfVar::stability(m, B = 50)
-# plot(stability_m)
-num_clusters <- 10
+stability_m <- ClustOfVar::stability(m, B = 100)
+m_cut <- lapply(1:15, function(i) ClustOfVar::cutreevar(m, k = i))
+m_gain <- sapply(m_cut, function(x) x$E)
+plot(1:15, m_gain, xlab = "N. de grupos", ylab = "Ganancia")
+
+# We use 10 clusters, for which gain in cohersion is 95.41%.
+
+m_final <- ClustOfVar::cutreevar(m, k = 10)
+stability_m <- ClustOfVar::stability(m, B = 10, graph = F)
+plot(stability_m)
+
+# Con 9 clusters las variables mdt, pendiente, norte, este y corine se separan del resto de variables
+# bioclimáticas.
+num_clusters <- 9
 tree_cut <- ClustOfVar::cutreevar(m, k = num_clusters)
-print(tree_cut$scores)
+# print(tree_cut$scores)
 print(tree_cut$var)
 
 # Using subselect.
@@ -49,16 +60,27 @@ df <- as.data.frame(dat[, 1:23])
 cc <- cor(na.omit(df))
 trim <- subselect::trim.matrix(cc)
 cc2 <- trim$trimmedmat
-res1 <- subselect::eleaps(mat = cc2, kmin = 10, kmax = 10)
+res1 <- subselect::eleaps(mat = cc2, kmin = 9, kmax = 9)
 print(colnames(df)[res1$bestsets])
 ```
+
+
+```{r kmeansvar}
+m2 <- ClustOfVar::kmeansvar(X.quanti = as.data.frame(dat[, 1:23]),
+                           X.quali = as.data.frame(dat[, 24]),
+                           init = 9)
+
+```
+
+
+
 
 ```{r kmed}
 # Using kmed.
 dd <- na.omit(df)
 dd2 <- cor(as.matrix(dd), method = "pearson")
 dd3 <- dd2
-gg <- kmed::fastkmed(dd3, ncluster = 10, iterate = 200)
+gg <- kmed::fastkmed(dd3, ncluster = 9, iterate = 200)
 selected_indices <- gg$medoid
 selected_columns <- colnames(dd)[gg$medoid]
 
@@ -79,8 +101,8 @@ mean_r2 <- mean(r2_values)
 cat("Average Variance Explained (Mean R²):", round(mean_r2, 4), "\n")
 print(setNames(r2_values, colnames(dropped_vars)))
 
-# La columna "este" tiene una R2 muy baja. La incluimos en el subset.
-selected_indices <- c(selected_indices, which(colnames(dd) == "este"))
+# Las columnas "norte" y "este" tiene una R2 muy baja. La incluimos en el subset.
+selected_indices <- c(selected_indices, which(colnames(dd) %in% c("norte", "este")))
 
 selected_vars <- dd[, selected_indices]
 dropped_vars  <- dd[, -selected_indices]
