@@ -1,16 +1,22 @@
-#' Title
+#' Variable selection with hierarchical clustering
 #'
-#' @param x
-#' @param stability
-#' @param B
-#' @param graph
-#' @param verbose
+#' @description
+#' \code{select_variables} uses hierarchical clustering from package \code{ClustOfVar}
+#' to select best subset of variables.
+#'
+#' @param x \code{data.frame} or \code{sf} object containing a set of variables.
+#' @param stability \code{logical} variable, if set to TRUE stability of partition is calculated.
+#' @param B \code{numeric}, number of bootstrap samples.
+#' @param verbose \code{logical} if set to TRUE, information about progress is printed.
 #'
 #' @returns
+#' A \code{list} containing the final model, a \code{data.frame} with the percentage of homogeneity
+#' that is accounted by each number of clusters and the subset of data variables. If \code{stability}
+#' is set to TRUE the output of the stability analysis is added.
 #' @export
 #'
 #' @examples
-select_variables <- function(x, stability = TRUE, B = 50, graph = TRUE, k = NULL, cutoff = .95, verbose = TRUE) {
+select_variables <- function(x, stability = TRUE, B = 50, k = NULL, cutoff = .95, verbose = TRUE) {
 
   # Checks.
   if (!is.data.frame(x)) x <- as.data.frame(x)
@@ -27,7 +33,7 @@ select_variables <- function(x, stability = TRUE, B = 50, graph = TRUE, k = NULL
   # Evaluate stability.
   if (stability) {
     if (verbose) cli::cli_alert_info("Evaluating stability of partitions")
-      model_stability <- ClustOfVar::stability(model, B = B, graph = graph)
+      model_stability <- ClustOfVar::stability(model, B = B, graph = FALSE)
   }
 
 
