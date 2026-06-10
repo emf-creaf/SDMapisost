@@ -58,10 +58,19 @@ select_variables <- function(x, stability = TRUE, B = 50, graph = TRUE, k = NULL
   model <- model_cut[[i]]
 
 
-  # Falta elegir una variable dentro de cada grupo.
+  # Choose the variable per cluster that has the highest correlation with the central component.
+  variables <- sapply(names(model$var), function(nam) {
+    y <-  model$var[[nam]]
+    ifelse(nrow(y) == 1, rownames(y), rownames(y)[which.max(abs(y[,"correlation"]))])
+  })
 
 
-  return(model)
+  # Output.
+  out <- list(model = model,
+              homogeneity = data.frame(k = input_index, accounted = model_homogeneity),
+              selected_data = x[, variables])
+  if (stability) out$stability <- model_stability
+  return(out)
 
 
 }

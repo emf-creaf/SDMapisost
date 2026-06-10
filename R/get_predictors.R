@@ -66,7 +66,7 @@ get_predictors <- function(folder, species, verbose = TRUE) {
   p <- cbind(p, terra::extract(corine, p)[, "CODE_18"])
   names(p)[ncol(p)] <- "corine"
   clc_classes <- c("artificial", "agricultural", "natural", "wetlands", "water bodies")
-  p$corine <- clc_classes[as.numeric(substr(p$corine, 1, 1))]
+  p$corine <- factor(clc_classes[as.numeric(substr(p$corine, 1, 1))])
 
 
   return(p)

@@ -34,6 +34,7 @@ En este trabajo hemos utilizado dos técnicas diferentes para obtener, a partir 
 carpeta <- "c:/imidra"
 especie <- "Cistus ladanifer"
 dat <- get_predictors(carpeta, especie, verbose = FALSE)
+newdat <- select_variables(dat)
 
 
 m <- ClustOfVar::hclustvar(X.quanti = as.data.frame(dat[, 1:23]), X.quali = as.data.frame(dat[, 24]))
