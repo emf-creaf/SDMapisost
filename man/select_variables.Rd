@@ -31,3 +31,16 @@ is set to TRUE the output of the stability analysis is added.
 \code{select_variables} uses hierarchical clustering from package \code{ClustOfVar}
 to select best subset of variables.
 }
+\examples{
+# All numeric data.
+data(decathlon, package = "ClustOfVar")
+subset <- select_variables(decathlon, cutoff = 0.95)
+plot(subset$homogeneity, xlab = "N. of clusters", ylab = "Gain in homogeneity")
+points(c(0, 13), c(.95, .95), type = "l", lty = 2, lwd = 2)
+
+# All categorical data.
+data(vnf, package = "ClustOfVar")
+subset <- select_variables(vnf, cutoff = 0.95)
+plot(subset$homogeneity, xlab = "N. of clusters", ylab = "Gain in homogeneity")
+points(c(0, 13), c(.95, .95), type = "l", lty = 2, lwd = 2)
+}

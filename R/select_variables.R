@@ -16,20 +16,35 @@
 #' @export
 #'
 #' @examples
+#' # All numeric data.
+#' data(decathlon, package = "ClustOfVar")
+#' subset <- select_variables(decathlon, cutoff = 0.95)
+#' plot(subset$homogeneity, xlab = "N. of clusters", ylab = "Gain in homogeneity")
+#' points(c(0, 13), c(.95, .95), type = "l", lty = 2, lwd = 2)
+#'
+#' # All categorical data.
+#' data(vnf, package = "ClustOfVar")
+#' subset <- select_variables(vnf, cutoff = 0.95)
+#' plot(subset$homogeneity, xlab = "N. of clusters", ylab = "Gain in homogeneity")
+#' points(c(0, 13), c(.95, .95), type = "l", lty = 2, lwd = 2)
 select_variables <- function(x, stability = TRUE, B = 50, k = NULL, cutoff = .95, verbose = TRUE) {
 
   # Checks.
   if (!is.data.frame(x)) x <- as.data.frame(x)
-  i <- sapply(x, is.numeric)
-  x.quanti <- x[, i, drop = FALSE]
-  x.quali <- x[, !i, drop = FALSE]
 
 
   # Hierarchical clustering.
   if (verbose) cli::cli_alert_info("Hierarchical clustering of input variables")
-  model <- ClustOfVar::hclustvar(X.quanti = x.quanti, X.quali = x.quali)
+  i <- sapply(x, is.numeric)
+  if (sum(i) == 0) {                              # All qualitative.
+    model <- ClustOfVar::hclustvar(X.quali = x)
+  } else if (ncol(x) == sum(i)) {                 # All quantitative.
+    model <- ClustOfVar::hclustvar(X.quanti = x)
+  } else {
+    model <- ClustOfVar::hclustvar(X.quanti =  x[, i, drop = FALSE], X.quali = x[, !i, drop = FALSE])
+  }
 
-
+browser()
   # Evaluate stability.
   if (stability) {
     if (verbose) cli::cli_alert_info("Evaluating stability of partitions")
@@ -37,18 +52,12 @@ select_variables <- function(x, stability = TRUE, B = 50, k = NULL, cutoff = .95
   }
 
 
-  # Cutting hierarchical tree at up to half the number of variables.
-  if (is.null(k)) {
-    k <- round(ncol(x)/2)
-  } else {
-    if (k >= ncol(x)) {
-      cli::cli_abort("Maximum number of clusters must be smaller than number of variables")
-    }
-  }
+  # Cutting hierarchical tree.
+  if (is.null(k)) k <- ncol(x)
   if (verbose) cli_id <- cli::cli_progress_bar("Cutting hierarchical tree", total = k)
   input_index <- 1:k
   model_cut <- lapply(seq_along(input_index), function(i) {
-    cli::cli_progress_update(id = cli_id)
+    if (verbose) cli::cli_progress_update(id = cli_id)
     return(ClustOfVar::cutreevar(model, k = i))
   })
   cli::cli_progress_done(id = cli_id)
