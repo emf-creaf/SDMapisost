@@ -41,10 +41,12 @@ En la sección de los MDT del CNIG, escojo el ámbito de la Comunidad de Madrid 
 
 EXPLICAR MEJOR CÓMO SE DESCARGA, EL SITIO WEB EXACTO, ETC.
 
+Transformamos el polígono que delimita la provincia de Madrid para que tenga el mismo sistema de referencia que el MDT. Esta transformación es más fácil y rápida que transformar todo el MDT.
+
 ```{r MDT}
 # Modificar la carpeta destino a conveniencia.
 destino <- "C:/imidra/mdt"
-lista_mdt <- list.files(destino)
+lista_mdt <- list.files(path = destino, pattern = "MDT25")
 
 # 2. Load them all into a SpatRasterCollection
 coleccion <- terra::sprc(file.path(destino, lista_mdt))
@@ -56,5 +58,14 @@ p <- terra::project(limites_madrid, terra::crs(mdt))
 
 mdt <- mdt |> terra::crop(p, snap = "out") |> terra::mask(p)
 
+
+```
+
+
+A continuación transformamos el MDT de Madrid al EPSG:25830 (UTM30N con datum ETRS89), que será nuestro sistema de referencia en todo el estudio.
+
+```{r MDT}
+mdt <- terra::project(mdt, "EPSG:25830")
 terra::writeRaster(mdt, file.path(destino, "mdt_madrid.tif"), overwrite = TRUE)
 ```
+

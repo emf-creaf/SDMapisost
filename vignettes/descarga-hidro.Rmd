@@ -40,7 +40,7 @@ v2 <- sf::st_read(file.path(destino, "IGR_HI_v1_ES030_Tajo.gpkg"),
 hidro <- sf::st_geometry(rbind(v1, v2))
 ```
 
-Transformamos "hidro" para que tenga el mismo sistema de referencia que el MDT.
+Transformamos "hidro" para que tenga el mismo sistema de referencia que el MDT. Esta transformación es más fácil y rápida que transformar todo el 
 
 ```{r transforma_hidro}
 carpeta_mdt <- "C:/imidra/mdt"
@@ -58,4 +58,8 @@ hidro <- hidro |> terra::vect()
 hidro_raster <- terra::rasterize(hidro, mdt, fun = min, touches = TRUE)
 distancia_hidro <- terra::distance(hidro_raster)
 terra::writeRaster(distancia_hidro, file.path(destino, "distancia_hidro.tif"))
+
+
+
+# Transform to UTM30N with ETRS89 -> EPSG:25830
 ```
