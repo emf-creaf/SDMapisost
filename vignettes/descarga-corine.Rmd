@@ -30,7 +30,8 @@ Como en documentos anteriores, descargaremos los límites geográficos de la CCA
 # install.packages("mapSpain", "sf")
 limites_madrid <- mapSpain::esp_get_ccaa("Madrid", year = "2024",
                                         epsg = "4258", resolution = "01") |>
-  sf::st_geometry()
+  sf::st_geometry() |>
+  terra::vect()
 ```
 
 
@@ -46,24 +47,22 @@ Una vez hecho esto podemos recortar y enmascarar el mapa para que se ajuste a lo
 # Modificar la carpeta destino a conveniencia.
 destino <- "C:/imidra/corine/corine_2018"
 
-# Extraemos leyenda.
-sld <- xml2::read_xml(file.path(destino, "LEYENDA_CLC.sld"))
-
-
-
-ns <- xml2::xml_ns(leyenda_clc)
-reglas <- xml2::xml_find_all(leyenda_clc, ".//se:Rule")
-
-titles <- xml2::xml_text(
-  xml2::xml_find_all(leyenda_clc, ".//*[local-name()='Title']")
-)
-
-fills <- xml2::xml_text(
-  xml2::xml_find_all(
-    leyenda_clc,
-    ".//*[local-name()='SvgParameter' and @name='fill']"
-  )
-)
+# # Extraemos leyenda.
+# sld <- xml2::read_xml(file.path(destino, "LEYENDA_CLC.sld"))
+# 
+# ns <- xml2::xml_ns(sld)
+# reglas <- xml2::xml_find_all(leyenda_clc, ".//se:Rule")
+# 
+# titles <- xml2::xml_text(
+#   xml2::xml_find_all(leyenda_clc, ".//*[local-name()='Title']")
+# )
+# 
+# fills <- xml2::xml_text(
+#   xml2::xml_find_all(
+#     leyenda_clc,
+#     ".//*[local-name()='SvgParameter' and @name='fill']"
+#   )
+# )
 
 ```
 
@@ -71,6 +70,57 @@ fills <- xml2::xml_text(
 ```{r Corine}
 # Modificar la carpeta destino a conveniencia.
 destino <- "C:/imidra/corine/corine_2018"
+
+# Extraemos el objecto "sf" que nos interesa y agrupamos polígonos por clase de nivel 1.
+# Antes de esos, hay que convertir el código del polígono en número.
+# Finalmente, transformamos a EPSG:25830.
+# Todos estos pasos se pueden realizar con "piping".
+
+
+corine <- sf::st_read(file.path(destino, "CLC2018_ES.gpkg"), "CLC18_ES", quiet = TRUE)
+corine <- corine |> sf::st_transform(crs = terra::crs(limites_madrid))
+corine <- corine |> sf::st_cast("MULTIPOLYGON")
+corine <- corine |> sf::st_make_valid()
+corine <- corine |> dplyr::mutate(level1 = as.numeric(CODE_18) %/% 100)
+corine <- corine |> terra::vect()
+corine <- corine |> terra::makeValid()
+corine <- corine |> terra::aggregate(by = "level1", fun = "modal", dissolve = TRUE)
+corine <- corine |> terra::crop(limites_madrid)
+corine <- corine |> terra::project("EPSG:25830")
+
+
+# Leemos el mdt para usarlo como referencia.
+mdt <- terra::rast(file.path("C:/imidra/mdt", "mdt_madrid.tif"))
+
+# Creamos un ráster con los polígonos CORINE.
+corine <- corine |> terra::rasterize(mdt, field = "level1")
+
+# Asignamos niveles.
+niveles <- data.frame(
+  id = 1:5, 
+  category = c("Superficies artificiales",
+               "Zonas agrícolas",
+               "Zonas forestales",
+               "Zonas húmedas",
+               "Superficies de agua"))
+levels(corine) <- niveles
+terra::plot(corine, col = rainbow(5))
+
+# Guardamos.
+terra::writeRaster(corine, file.path(destino, "CORINE Madrid nivel 1.tif"), overwrite = TRUE)
+
+# corine <- corine |> dplyr::group_by(level1)
+# corine <- corine |> sf::st_cast("MULTIPOLYGON")
+# corine <- corine |> dplyr::summarize(geometry = sf::st_union(geom))
+# corine <- corine |> dplyr::ungroup()
+# corine <- corine |> sf::st_transform(crs = "EPSG:25830")
+
+  
+
+
+
+kk <- corine |>
+  
 
 # Creamos una carpeta 2018.
 dir.create(destino, showWarnings = FALSE)

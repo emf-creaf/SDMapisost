@@ -15,14 +15,18 @@ knitr::opts_chunk$set(
 ```
 
 
+Leemos los límites de la CA de Madrid y transformamos el polígono resultante a EPSG:25830 (UTM30N con ETRS89).
+
 ```{r Madrid}
 # install.packages("mapSpain", "sf")
 limites_madrid <- mapSpain::esp_get_ccaa("Madrid", year = "2024",
                                         epsg = "4258", resolution = "01") |>
   sf::st_geometry() |>
-  terra::vect()
+  terra::vect() |>
+  terra::project("EPSG:25830")
 ```
 
+Hacemos lo mismo con hidro.
 
 ```{r descarga_hidro}
 # Modificar la carpeta destino a conveniencia.
@@ -37,10 +41,13 @@ v1 <- sf::st_read(file.path(destino, "IGR_HI_v1_ES020_Duero.gpkg"),
                   layer = "hi_cauce_s_es020", quiet = TRUE)
 v2 <- sf::st_read(file.path(destino, "IGR_HI_v1_ES030_Tajo.gpkg"),
                   layer = "hi_cauce_s_es030", quiet = TRUE)
-hidro <- sf::st_geometry(rbind(v1, v2))
+hidro <- sf::st_geometry(rbind(v1, v2)) |>
+  terra::vect() |>
+  terra::project("EPSG:25830")
 ```
 
-Transformamos "hidro" para que tenga el mismo sistema de referencia que el MDT. Esta transformación es más fácil y rápida que transformar todo el 
+
+Transformamos "limites_madrid" para que tenga el mismo sistema de referencia que el archivo "hidro". Esta transformación es más fácil y rápida que transformar "hidro".
 
 ```{r transforma_hidro}
 carpeta_mdt <- "C:/imidra/mdt"
@@ -51,15 +58,20 @@ sf::st_write(hidro, file.path(destino, "hidro_madrid.shp"),
              append = FALSE, quiet = TRUE)
 ```
 
-Construimos un ráster de distancias tomando el MDT como referencia. Primero convertimos la red hidrológica en un ráster para acelerar los cálculos.
+Construimos un ráster de distancias tomando el MDT como referencia. Primero convertimos la red hidrológica en un ráster para acelerar los cálculos, usando el MDT de madrid como referencia.
 
 ```{r distancia_hidro}
-hidro <- hidro |> terra::vect()
-hidro_raster <- terra::rasterize(hidro, mdt, fun = min, touches = TRUE)
-distancia_hidro <- terra::distance(hidro_raster)
-terra::writeRaster(distancia_hidro, file.path(destino, "distancia_hidro.tif"))
+carpeta_mdt <- "C:/imidra/mdt"
+mdt <- terra::rast(file.path(carpeta_mdt, "mdt_madrid.tif"))
+distancia_hidro <- terra::rasterize(hidro, mdt, fun = min, touches = TRUE) |>
+  terra::distance()
+```
 
 
 
-# Transform to UTM30N with ETRS89 -> EPSG:25830
+Guardamos los resultados.
+
+
+```{r distancia_hidro}
+terra::writeRaster(distancia_hidro, file.path(destino, "distancia_hidro.tif"), overwrite = TRUE)
 ```

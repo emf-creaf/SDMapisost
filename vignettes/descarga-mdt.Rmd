@@ -23,14 +23,15 @@ knitr::opts_chunk$set(
 
 ## Zona de estudio
 
-Como en documentos anteriores, descargaremos los límites geográficos de la CCAA de Madrid para poder recortar y enmascarar el mapa CORINE.
+Como en documentos anteriores, descargaremos los límites geográficos de la CCAA de Madrid para poder recortar y enmascarar el mapa CORINE. Igualmente lo reproyectamos a EPSG:25830, sistema en el que trabajaremos durante todo el proyecto.
 
 ```{r Madrid}
 # install.packages("mapSpain", "sf")
 limites_madrid <- mapSpain::esp_get_ccaa("Madrid", year = "2024",
                                         epsg = "4258", resolution = "01") |>
   sf::st_geometry() |>
-  terra::vect()
+  terra::vect() |>
+  terra::project("EPSG:25830")
 ```
 
 
@@ -48,24 +49,16 @@ Transformamos el polígono que delimita la provincia de Madrid para que tenga el
 destino <- "C:/imidra/mdt"
 lista_mdt <- list.files(path = destino, pattern = "MDT25")
 
-# 2. Load them all into a SpatRasterCollection
+# Lo cargamos todo como una collección..
 coleccion <- terra::sprc(file.path(destino, lista_mdt))
-
-# 3. Merge the collection and save it directly in one step
 mdt  <- terra::merge(coleccion)
 
-p <- terra::project(limites_madrid, terra::crs(mdt))
-
-mdt <- mdt |> terra::crop(p, snap = "out") |> terra::mask(p)
-
-
-```
-
-
-A continuación transformamos el MDT de Madrid al EPSG:25830 (UTM30N con datum ETRS89), que será nuestro sistema de referencia en todo el estudio.
-
-```{r MDT}
-mdt <- terra::project(mdt, "EPSG:25830")
+# Reproyectamos el MDT y lo recortamos.
+mdt <- terra::project(mdt,  "EPSG:25830") |>
+  terra::crop(limites_madrid, snap = "out") |>
+  terra::mask(limites_madrid)
 terra::writeRaster(mdt, file.path(destino, "mdt_madrid.tif"), overwrite = TRUE)
 ```
+
+
 
