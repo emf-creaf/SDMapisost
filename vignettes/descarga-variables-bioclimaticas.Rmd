@@ -168,4 +168,75 @@ for (modelo in modelos_GCM) {
 ```
 
 
+A continuación reproyectamos las variables para que estén en el sistema de referencia EPSG:25830, como el resto de variables. Primero las variables históricas.
 
+
+```{r reproject_historic, echo = TRUE, eval = TRUE}
+destino <- "C:/imidra/bioclim/historico/wc2.1_10m_bio"
+lista_archivos <- list.files(destino)
+for (i in lista_archivos) {
+
+  # Leer ráster.
+  r <- terra::rast(file.path(destino, i))
+  
+  # Reproyectamos.
+  r <- terra::project(r, "EPSG:25830")
+
+  # Guardamos en disco con el mismo nombre.
+  terra::writeRaster(r, file.path(destino, i), overwrite = TRUE)
+}
+```
+
+
+A continuación las variables futuras.
+
+```{r reproject_future, echo = TRUE, eval = TRUE}
+
+# Modelos Global Change Model disponibles. Seleccionaremos tan solo aquellos que
+# tienen completos los 4 escenarios climáticos.
+modelos_GCM <- c("ACCESS-CM2", "BCC-CSM2-MR",
+            "CMCC-ESM2", "EC-Earth3-Veg",
+            "GISS-E2-1-G", "INM-CM5-0", "IPSL-CM6A-LR",
+            "MIROC6", "MPI-ESM1-2-HR", "MRI-ESM2-0", "UKESM1-0-LL")
+
+# Shared Socio-economic Pathways disponibles.
+escenarios_SSP <- c("ssp126", "ssp245", "ssp370", "ssp585")
+
+# Periodos temporales disponibles.
+periodos_temporales <- c("2021-2040", "2041-2060", "2061-2080", "2081-2100")
+# Bucle de modelos.
+for (modelo in modelos_GCM) {
+
+  # URL origen y carpeta destino.
+  url1 <- paste0(url_futuro, modelo, "/")
+  dest1 <- file.path(destino, modelo)
+  dir.create(dest1, showWarnings = FALSE)
+  
+  # Bucle de escenarios climáticos.
+  for (escenario in escenarios_SSP) {
+
+    # URL origen y carpeta destino
+    url2 <- paste0(url1, escenario, nombre_raiz, modelo, "_", escenario, "_")
+    dest2 <- file.path(destino, modelo, escenario)
+    dir.create(dest2, showWarnings = FALSE)
+
+    # Bucle de periodos temporales.
+    for (periodo in periodos_temporales) {
+
+      # URL origen y carpeta destino.
+      url3 <- paste0(url2, periodo, ".tif")
+      dest3 <- file.path(destino, modelo, escenario, periodo)
+
+      # Leyendo archivo.
+      r <- terra::rast(file.path(dest3, basename(url3)))
+      
+      # Reproyección.
+      r <- terra::project(r, "EPSG:25830")
+      
+      # Guardando en disco.
+      terra::writeRaster(r, file.path(dest3, basename(url3)), overwrite = TRUE)
+      
+    }
+  }
+}
+```
