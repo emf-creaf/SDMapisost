@@ -31,33 +31,25 @@ extract_predictors <- function(p, x, verbose = TRUE) {
   # Checks.
   if (!(any(c("SpatVector", "data.frame") %in% class(p)))) cli::cli_abort("Input 'p' must be a 'terra' object or a 'data.frame'")
 
-
-  # Extract topographic data.
-  if (verbose) cli::cli_alert_info("Extracting terrain characteristics")
-  if (!is.null(x$mdt)) p$mdt <- terra::extract(x$mdt, p, ID = FALSE, method = "bilinear")
-  if (!is.null(x$slope)) p$slope <- terra::extract(x$slope, p, ID = FALSE, method = "bilinear")
-  if (!is.null(x$northness)) p$northness <- terra::extract(x$northness, p, ID = FALSE, method = "bilinear")
-  if (!is.null(x$eastness)) p$eastness <- terra::extract(x$eastness, p, ID = FALSE, method = "bilinear")
-
-
-  # Extract bioclimatic data.
-  if (!is.null(x$bioclim)) {
-    if (verbose) cli::cli_alert_info("Extracting bioclimatic variables")
-    for (i in names(x$bioclim)) p[[i]] <- terra::extract(x$bioclim[[i]], p, ID = FALSE, method = "bilinear")
+  name_elements <- c("terrain", "climate", "distances", "categorical")
+  for (i in name_elements) {
+    if (!is.null(x[[i]])) {
+      if (any(is.null(names(x[[i]])))) cli::cli_abort(paste0("All elements in ", i, " of input list 'x' must have a name"))
+    }
   }
 
 
-  # Extract land use data.
-  if (!is.null(x$corine)) {
-    if (verbose) cli::cli_alert_info("Extracting land use variables")
-    p$corine <- terra::extract(x$corine, p, ID = FALSE)
-  }
-
-
-  # Extract distance to hidrographic network data.
-  if (!is.null(x$hidro)) {
-    if (verbose) cli::cli_alert_info("Extracting distance to hidrographic network variables")
-    p$hidro <- terra::extract(x$hidro, p, ID = FALSE)
+  # Extracting predictor data for presence locations.
+  for (i in name_elements) {
+    if (!is.null(x[[i]])) {
+      if (verbose) cli::cli_alert_info(paste0(" Extracting ", i, " data"))
+      y <- x[[i]]
+      for (j in names(y)) {
+        if (verbose) cli::cli_alert_info(paste0(" -> ", j))
+        method <- ifelse(is.factor(y[[j]]), "simple", "bilinear")
+        p[[j]] <- terra::extract(y[[j]], p, ID = FALSE, method = method)
+      }
+    }
   }
 
 

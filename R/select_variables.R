@@ -27,6 +27,29 @@
 #' subset <- select_variables(vnf, cutoff = 0.95)
 #' plot(subset$homogeneity, xlab = "N. of clusters", ylab = "Gain in homogeneity")
 #' points(c(0, 13), c(.95, .95), type = "l", lty = 2, lwd = 2)
+#'
+#'
+#' folder <- "C:/imidra"
+#' species <- "Cistus ladanifer"
+#' p <- get_presence(folder, species)
+#'
+#' # Absolute paths to files.
+#' carpetas <- list(mdt = file.path("C:/imidra", "mdt/mdt_madrid.tif"),
+#' bioclim = file.path("C:/imidra/bioclim", paste0("historico/wc2.1_10m_bio/wc2.1_10m_bio_", 1:19, ".tif")),
+#' corine = file.path("C:/imidra", "corine/corine_2018/CORINE Madrid nivel 1.tif"),
+#' hidro = file.path("C:/imidra", "hidro/distancia_hidro.tif"))
+#'
+#' # Name the bioclimatic variables.
+#' names(carpetas$bioclim) <- paste0("bioclim_", 1:19)
+#'
+#' # Read data.
+#' x <- get_predictors(carpetas)
+#'
+#' # Extract predictors at 'p' locations.
+#' p <- extract_predictors(p, x)
+#'
+#' # Variable selection.
+#' subset <- select_variables(p, cutoff = 0.95)
 select_variables <- function(x, stability = TRUE, B = 50, k = NULL, cutoff = .95, verbose = TRUE) {
 
   # Checks.
@@ -44,7 +67,7 @@ select_variables <- function(x, stability = TRUE, B = 50, k = NULL, cutoff = .95
     model <- ClustOfVar::hclustvar(X.quanti =  x[, i, drop = FALSE], X.quali = x[, !i, drop = FALSE])
   }
 
-browser()
+
   # Evaluate stability.
   if (stability) {
     if (verbose) cli::cli_alert_info("Evaluating stability of partitions")
@@ -72,7 +95,7 @@ browser()
   i <- which(model_homogeneity > 0.95)[1]
   model <- model_cut[[i]]
 
-
+browser()
   # Choose the variable per cluster that has the highest correlation with the central component.
   variables <- sapply(names(model$var), function(nam) {
     y <-  model$var[[nam]]

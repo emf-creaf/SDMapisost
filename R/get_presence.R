@@ -49,6 +49,14 @@ get_presence <- function(folder, species, ifn = 2, verbose = TRUE) {
                     crs = sf::st_crs(paste0("EPSG:", df$crs[1])))
 
 
-  return(sf::st_geometry(x))
+  # Transform to EPSG:25830.
+  x <- sf::st_transform(x, crs = "EPSG:25830")
+
+
+  # Switch to a SpatVector object.
+  x <- x |> sf::st_geometry() |> terra::vect()
+
+
+  return(x)
 
 }

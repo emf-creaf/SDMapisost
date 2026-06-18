@@ -77,14 +77,14 @@ get_predictors <- function(paths, verbose = TRUE) {
   hidro <- terra::rast(paths[["hidro"]])
 
 
-  # Collect into a list.
-  l <- list(mdt = mdt,
-            slope = slope,
-            northness = northness,
-            eastness = eastness,
-            corine = corine,
-            hidro = hidro,
-            bioclim = biov)
+  # Collect into a thematic list.
+  l <- list(terrain = list(mdt = mdt,
+                           slope = slope,
+                           northness = northness,
+                           eastness = eastness),
+            categorical = list(corine = corine),
+            distances = list(hidro = hidro),
+            climate = biov)
 
 
   return(l)

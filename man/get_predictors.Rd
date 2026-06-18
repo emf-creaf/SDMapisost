@@ -4,14 +4,14 @@
 \alias{get_predictors}
 \title{Predictor variables at presence locations.}
 \usage{
-get_predictors(folder, species, verbose = TRUE)
+get_predictors(paths, verbose = TRUE)
 }
 \arguments{
+\item{verbose}{\code{logical}, if TRUE progress information is produced.}
+
 \item{folder}{\code{character} string with the root name of the folder with the data.}
 
 \item{species}{\code{character} string with the full name of the species.}
-
-\item{verbose}{\code{logical}, if TRUE progress information is produced.}
 }
 \value{
 A \code{terra} SpatVector object.
@@ -22,7 +22,15 @@ that are used in the analysis at all presence locations for the input
 species.
 }
 \examples{
-folder <- "C:/imidra/"
-species <- "Cistus ladanifer"
-x <- get_predictors(folder, species)
+# Absolute paths to files.
+carpetas <- list(mdt = file.path("C:/imidra", "mdt/mdt_madrid.tif"),
+bioclim = file.path("C:/imidra/bioclim", paste0("historico/wc2.1_10m_bio/wc2.1_10m_bio_", 1:19, ".tif")),
+corine = file.path("C:/imidra", "corine/corine_2018/CORINE Madrid nivel 1.tif"),
+hidro = file.path("C:/imidra", "hidro/distancia_hidro.tif"))
+
+# Name the bioclimatic variables.
+names(carpetas$bioclim) <- paste0("bioclim_", 1:19)
+
+# Read data.
+x <- get_predictors(carpetas)
 }
