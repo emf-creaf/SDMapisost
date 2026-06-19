@@ -9,7 +9,7 @@ select_variables(
   stability = TRUE,
   B = 50,
   k = NULL,
-  cutoff = 0.95,
+  cutoff = NULL,
   verbose = TRUE
 )
 }

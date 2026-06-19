@@ -4,7 +4,7 @@
 \alias{get_presence}
 \title{Title}
 \usage{
-get_presence(folder, species, ifn = 2, verbose = TRUE)
+get_presence(folder, species, ifn = 4, verbose = TRUE)
 }
 \arguments{
 \item{folder}{\code{character} string indicating the root folder to retrieve the data from.}
@@ -22,6 +22,7 @@ Title
 \examples{
 folder <- "C:/imidra"
 species <- "Cistus ladanifer"
+species <- "Erica arborea"
 x <- get_presence(folder, species)
 
 }

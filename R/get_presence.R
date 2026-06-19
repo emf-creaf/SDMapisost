@@ -11,12 +11,13 @@
 #' @examples
 #' folder <- "C:/imidra"
 #' species <- "Cistus ladanifer"
+#' species <- "Erica arborea"
 #' x <- get_presence(folder, species)
 #'
-get_presence <- function(folder, species, ifn = 2, verbose = TRUE) {
+get_presence <- function(folder, species, ifn = 4, verbose = TRUE) {
 
   # Checks.
-  nombre_especie <- trimws(species)
+  nombre_especie <- tolower(trimws(species))
   if (!is.numeric(ifn)) cli::cli_abort("Input parameter 'ifn' must be numeric")
   if (length(ifn) != 1) cli::cli_abort("Input parameter 'ifn' must have length = 1")
   if (!(ifn %in% c(2, 3, 4))) cli::cli_abort("Input parameter 'ifn' must be equal to 2, 3 or 4")
@@ -33,14 +34,16 @@ get_presence <- function(folder, species, ifn = 2, verbose = TRUE) {
   # Retrieve presence data for species.
   if (verbose) cli::cli_alert_info(paste0("Retreaving presence data for species ", species))
   x <- df[, c("id_unique_code", "plot", "coordx", "coordy")]
-  x$y <- sapply(df$understory, function(z) {
+  x$species_exists <- sapply(df$understory, function(z) {
     zz <- z$shrub[[1]]
     if (is.data.frame(zz) && nrow(zz) > 0) {
-      nombre_especie %in% trimws(zz$sp_name)
+      nombre_especie %in% tolower(trimws(zz$sp_name))
       } else {
         FALSE
       }
   })
+  x <- x[x$species_exists,]
+  x$species_exists <- NULL
 
 
   # Convert to "sf".

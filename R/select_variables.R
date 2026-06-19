@@ -50,10 +50,11 @@
 #'
 #' # Variable selection.
 #' subset <- select_variables(p, cutoff = 0.95)
-select_variables <- function(x, stability = TRUE, B = 50, k = NULL, cutoff = .95, verbose = TRUE) {
+select_variables <- function(x, stability = TRUE, B = 50, k = NULL, cutoff = NULL, verbose = TRUE) {
 
   # Checks.
   if (!is.data.frame(x)) x <- as.data.frame(x)
+  if (is.null(cutoff)) cutoff <- .95
 
 
   # Hierarchical clustering.
@@ -89,13 +90,13 @@ select_variables <- function(x, stability = TRUE, B = 50, k = NULL, cutoff = .95
 
   # Choose the subset of variables with gain in homogeneity that is just larger than 'cutoff'.
   max_homo <- max(model_homogeneity)
-  if (max_homo < .95) {
+  if (max_homo < cutoff) {
     cli::cli_abort(paste0("Accounted homogeneity is ", max_homo, ". Please choose a smaller 'cutoff' value"))
   }
-  i <- which(model_homogeneity > 0.95)[1]
+  i <- which(model_homogeneity > cutoff)[1]
   model <- model_cut[[i]]
 
-browser()
+
   # Choose the variable per cluster that has the highest correlation with the central component.
   variables <- sapply(names(model$var), function(nam) {
     y <-  model$var[[nam]]
@@ -108,7 +109,8 @@ browser()
               homogeneity = data.frame(k = input_index, accounted = model_homogeneity),
               selected_data = x[, variables])
   if (stability) out$stability <- model_stability
+
+
+
   return(out)
-
-
 }
