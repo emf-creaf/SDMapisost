@@ -36,9 +36,8 @@ selecting_predictors <- function() {
 
     # Save.
     cli::cli_alert_info(paste0("Saving results for species ", sp))
-    saveRDS(out, file = "final_predictors.rds")
+    base::saveRDS(out, file = "final_predictors.rds")
 
   }
-
 
 }

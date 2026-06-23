@@ -53,19 +53,19 @@
 select_variables <- function(x, stability = TRUE, B = 50, k = NULL, cutoff = NULL, verbose = TRUE) {
 
   # Checks.
-  if (!is.data.frame(x)) x <- as.data.frame(x)
+  if (!is.data.frame(x)) df <- as.data.frame(x)
   if (is.null(cutoff)) cutoff <- .95
 
 
   # Hierarchical clustering.
   if (verbose) cli::cli_alert_info("Hierarchical clustering of input variables")
-  i <- sapply(x, is.numeric)
+  i <- sapply(df, is.numeric)
   if (sum(i) == 0) {                              # All qualitative.
-    model <- ClustOfVar::hclustvar(X.quali = x)
-  } else if (ncol(x) == sum(i)) {                 # All quantitative.
-    model <- ClustOfVar::hclustvar(X.quanti = x)
+    model <- ClustOfVar::hclustvar(X.quali = df)
+  } else if (ncol(df) == sum(i)) {                 # All quantitative.
+    model <- ClustOfVar::hclustvar(X.quanti = df)
   } else {
-    model <- ClustOfVar::hclustvar(X.quanti =  x[, i, drop = FALSE], X.quali = x[, !i, drop = FALSE])
+    model <- ClustOfVar::hclustvar(X.quanti =  df[, i, drop = FALSE], X.quali = df[, !i, drop = FALSE])
   }
 
 
@@ -77,7 +77,7 @@ select_variables <- function(x, stability = TRUE, B = 50, k = NULL, cutoff = NUL
 
 
   # Cutting hierarchical tree.
-  if (is.null(k)) k <- ncol(x)
+  if (is.null(k)) k <- ncol(df)
   if (verbose) cli_id <- cli::cli_progress_bar("Cutting hierarchical tree", total = k)
   input_index <- 1:k
   model_cut <- lapply(seq_along(input_index), function(i) {
@@ -107,9 +107,8 @@ select_variables <- function(x, stability = TRUE, B = 50, k = NULL, cutoff = NUL
   # Output.
   out <- list(model = model,
               homogeneity = data.frame(k = input_index, accounted = model_homogeneity),
-              selected_data = x[, variables])
+              selected_data = terra::wrap(x[, variables]))
   if (stability) out$stability <- model_stability
-
 
 
   return(out)
