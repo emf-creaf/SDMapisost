@@ -46,19 +46,19 @@ validating_maxent <- function(nbackground = 10000) {
                "Quercus coccifera", "Retama sphaerocarpa")
 
   # Minimum distance for spatial filter.
-  min_distance <- c(1000, 2000)
-  num_points <- setNames(c(1000, 1000), min_distance)
+  min_distance <- c(0, 1000)
+  num_points <- setNames(c(0, 1000), min_distance)
 
   # Number of simulations.
   num_simu <- 100
   num_null <- 100
 
   # Proportion of training points.
-  train_prop <- .7
+  train_prop <- .8
 
   resultados <- list()
 
-  for (sp in species) {
+  for (sp in species[2]) {
 
     cli::cli_alert_info(paste0("Species ", sp))
 
@@ -104,22 +104,16 @@ validating_maxent <- function(nbackground = 10000) {
                                    num_points[as.character(mdist)], " points"))
 
         # Spatial filter of presence points.
-        if (mdist == 0) {
-          px_filtered <- dfp
-          bx_filtered <- dfb
+        px_filtered <- distance_filter(dfp, min_dist = mdist, columns = c("x", "y"), verbose = FALSE)
 
-        } else {
-          px_filtered <- distance_filter(dfp, min_dist = mdist, columns = c("x", "y"), verbose = FALSE)
+        # Spatial filter of background points.
+        bx_filtered <- distance_filter(dfb, min_dist = mdist, columns = c("x", "y"), verbose = FALSE)
 
-          # Spatial filter of background points.
+        while (nrow(bx_filtered) < num_points[as.character(mdist)]) {
+          cli::cli_alert("         New attempt")
           bx_filtered <- distance_filter(dfb, min_dist = mdist, columns = c("x", "y"), verbose = FALSE)
-
-          while (nrow(bx_filtered) < num_points[as.character(mdist)]) {
-            cli::cli_alert("         New attempt")
-            bx_filtered <- distance_filter(dfb, min_dist = mdist, columns = c("x", "y"), verbose = FALSE)
-          }
-          bx_filtered <- bx_filtered[1:num_points[as.character(mdist)], ]
         }
+        bx_filtered <- bx_filtered[1:num_points[as.character(mdist)], ]
 
         # Training data.
         ipx <- 1:round(nrow(px_filtered)*train_prop)
@@ -148,24 +142,25 @@ validating_maxent <- function(nbackground = 10000) {
 
           cli::cli_alert_info(paste0("         Null model ", inull, "..."))
 
-          m_null <- dismo::maxent(x = df_train, p = sample(v))
+          j <- sample(1:length(v))
+          m_null <- dismo::maxent(x = df_train, p = v[j])
           pr_null <- dismo::predict(m_null, df_test)
           auc_null[inull] <- pROC::auc(z, pr_null, levels =  c(0, 1), direction = "<")
           boyce_null[inull] <- ecospat::ecospat.boyce(pr_null, pr_null[1:np], nclass = 0,
                                                       PEplot = FALSE, method = "pearson")$cor
         }
 
-        pvalue_auc[simu] <- sum(auc_index[simu] < auc_null)/num_null
-        pvalue_boyce[simu] <- sum(boyce_index[simu] < boyce_null)/num_null
-
-        cli::cli_alert_success(paste0("AUC p-value = ", pvalue_auc[simu], " --- Boyce p-value = ", pvalue_boyce[simu]))
+        pvalue_auc <- sum(auc_index[simu] < auc_null)/num_null
+        pvalue_boyce <- sum(boyce_index[simu] < boyce_index)/num_null
 
       }
+
+browser()
 
     }
 
     distancia[[mdist]] <- list(auc = auc_index, boyce = boyce_index,
-                               pvalue_auc = pvalue_auc, pvalue_boyce = pvalue_boyce)
+                               )
 
   }
 

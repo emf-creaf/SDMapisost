@@ -4,7 +4,7 @@
 #' @export
 #'
 #' @examples
-selecting_predictors <- function() {
+selecting_predictors <- function(save = TRUE) {
 
   folder <- "C:/imidra"
   species <- c("Cistus ladanifer", "Erica arborea", "Genista florida",
@@ -35,9 +35,13 @@ selecting_predictors <- function() {
     out[[sp]] <- select_variables(y, cutoff = cutoff[sp])
 
     # Save.
-    cli::cli_alert_info(paste0("Saving results for species ", sp))
-    base::saveRDS(out, file = "final_predictors.rds")
+    if (save) {
+      cli::cli_alert_info(paste0("Saving results for species ", sp))
+      base::saveRDS(out, file = "final_predictors.rds")
+    }
 
   }
+
+  return(out)
 
 }
