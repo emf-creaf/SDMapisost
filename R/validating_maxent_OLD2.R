@@ -53,19 +53,6 @@ validating_maxent <- function(nbackground = 10000) {
   num_simu <- 100
   num_null <- 100
 
-  #######################################
-  # To be used below.
-  random_points <- function(mask, x, size) {
-    z <- terra::spatSample(mask, size = size, method = "random",
-                           xy = TRUE, exact = TRUE, na.rm = TRUE)
-    z <- terra::vect(z, geom = c("x", "y"), crs = "EPSG:25830")
-    z <- extract_predictors(z, x, verbose = FALSE)
-    z$category <- NULL
-    z <- terra::na.omit(z, field = "")
-    return(z)
-  }
-  #######################################
-
   # Proportion of training points.
   train_prop <- .7
 
@@ -86,10 +73,7 @@ validating_maxent <- function(nbackground = 10000) {
     # # Extract predictors at 'p' locations.
     # px <- extract_predictors(p, x)
 
-
-    # Presence data.
     px <- terra::unwrap(out[[sp]]$selected_data)
-    px <- terra::na.omit(px, field = "")
 
     distancia <- list()
     for (mdist in min_distance) {
@@ -97,12 +81,15 @@ validating_maxent <- function(nbackground = 10000) {
       cli::cli_alert_info(paste0("   Minimum distance ", mdist, " meters"))
 
       # Extract background points.
-      bx <- random_points(corine_mask, x, nbackground)
-      # b <- terra::spatSample(corine_mask, size = nbackground, method = "random",
-      #                        xy = TRUE, exact = TRUE, na.rm = TRUE)
-      # b <- terra::vect(b, geom = c("x", "y"), crs = "EPSG:25830")
-      # bx <- extract_predictors(b, x, verbose = FALSE)
-      # bx$category <- NULL
+      b <- terra::spatSample(corine_mask, size = nbackground, method = "random",
+                             xy = TRUE, exact = TRUE, na.rm = TRUE)
+      b <- terra::vect(b, geom = c("x", "y"), crs = "EPSG:25830")
+      bx <- extract_predictors(b, x, verbose = FALSE)
+      bx$category <- NULL
+
+      # Remove NA's.
+      px <- terra::na.omit(px, field = "")
+      bx <- terra::na.omit(bx, field = "")
 
       # Remove unneeded predictors and build data.frames.
       bx <- bx[, names(px)]
@@ -110,8 +97,7 @@ validating_maxent <- function(nbackground = 10000) {
       dfb <- cbind(as.data.frame(bx), terra::crds(bx))
 
       # Simulation loop.
-      auc_index <- boyce_index <- tss_index <-
-        pvalue_auc <- pvalue_boyce <- pvalue_tss <- numeric(num_simu)
+      auc_index <- boyce_index <- pvalue_auc <- pvalue_boyce <- numeric(num_simu)
       for (simu in 1:num_simu) {
 
         cli::cli_alert_info(paste0("      Simulation ", simu, ", ",
@@ -135,20 +121,29 @@ validating_maxent <- function(nbackground = 10000) {
           bx_filtered <- bx_filtered[1:num_points[as.character(mdist)], ]
         }
 
-        # Prepare data.
+        # Training data.
         np <- nrow(px_filtered)
         nb <- nrow(bx_filtered)
-        v <- c(rep(1, np), rep(0, nb))
-        df <- rbind(as.data.frame(px_filtered), as.data.frame(bx_filtered))
+        npx <- round(np * train_prop)
+        nbx <- round(nb * train_prop)
+        ipx <- 1:npx
+        ibx <- 1:nbx
+
+        v <- c(rep(1, npx), rep(0, nbx))
+        df_train <- rbind(as.data.frame(px_filtered)[ipx,], as.data.frame(bx_filtered)[ibx,])
 
         # MaxEnt model.
-        m <- dismo::maxent(x = subset(df, select = -c(x, y)), p = v)
-        pr <- dismo::predict(m, subset(df, select = -c(x, y)))
+        m <- dismo::maxent(x = df_train, p = v)
+
+        # Test data.
+        df_test <- rbind(as.data.frame(px_filtered)[-ipx,], as.data.frame(bx_filtered)[-ibx,])
+        pr <- dismo::predict(m, df_test)
+        z <- c(rep(1, np - npx), rep(0, nb - nbx))
 
         # Indices.
-        auc_index[simu] <- m@results["Training.AUC", ]
+        if (length(z) != length(pr)) browser()
+        auc_index[simu] <- pROC::auc(z, pr, levels =  c(0, 1), direction = "<")
         boyce_index[simu] <- ecospat::ecospat.boyce(pr, pr[1:np], nclass = 0, PEplot = FALSE, method = "pearson")$cor
-        tss_index[simu] <- ecospat::ecospat.max.tss(pr, v)$max.TSS
 
         ##################################
 
@@ -159,31 +154,17 @@ validating_maxent <- function(nbackground = 10000) {
 
           cli::cli_progress_update()
 
-          # Random presence points.
-          px_rand <- random_points(corine_mask, x, nrow(dfp))
-          px_rand <- px_rand[, names(px)]
-          dfpx_rand <- cbind(as.data.frame(px_rand), terra::crds(px_rand))
-
-          # Spatial filter.
-          dfpx_rand <- distance_filter(dfpx_rand, min_dist = mdist, columns = c("x", "y"), verbose = FALSE)
-
-          # New data.frame.
-          df_rand <- rbind(as.data.frame(dfpx_rand), as.data.frame(bx_filtered))
-
-          # Model.
-          v <- c(rep(1, nrow(dfpx_rand)), rep(0, nb))
-          m_null <- dismo::maxent(x = subset(df_rand, select = -c(x, y)), p = v)
-          pr_null <- dismo::predict(m_null, subset(df_rand, select = -c(x, y)))
-          auc_null[inull] <- m_null@results["Training.AUC", ]
+          m_null <- dismo::maxent(x = df_train, p = sample(v))
+          pr_null <- dismo::predict(m_null, df_test)
+          if (length(z) != length(pr_null)) browser()
+          auc_null[inull] <- pROC::auc(z, pr_null, levels =  c(0, 1), direction = "<")
           boyce_null[inull] <- ecospat::ecospat.boyce(pr_null, pr_null[1:np], nclass = 0,
                                                       PEplot = FALSE, method = "spearman")$cor
-          tss_null[inull] <- ecospat::ecospat.max.tss(pr_null, v)$max.TSS
         }
         cli::cli_progress_done()
 
         pvalue_auc[simu] <- sum(auc_index[simu] < auc_null)/num_null
         pvalue_boyce[simu] <- sum(boyce_index[simu] < boyce_null)/num_null
-        pvalue_tss[simu] <- sum(tss_index[simu] < tss_null)/num_null
 
         cli::cli_alert_success(paste0("AUC p-value = ", pvalue_auc[simu], " --- Boyce p-value = ", pvalue_boyce[simu]))
 
@@ -191,8 +172,8 @@ validating_maxent <- function(nbackground = 10000) {
 
     }
 
-    distancia[[mdist]] <- list(auc = auc_index, boyce = boyce_index, tss = tss_index,
-                               pvalue_auc = pvalue_auc, pvalue_boyce = pvalue_boyce, pvalue_tss = pvalue_tss)
+    distancia[[mdist]] <- list(auc = auc_index, boyce = boyce_index,
+                               pvalue_auc = pvalue_auc, pvalue_boyce = pvalue_boyce)
 
   }
 
