@@ -46,11 +46,11 @@ validating_maxent <- function(nbackground = 10000) {
                "Quercus coccifera", "Retama sphaerocarpa")
 
   # Minimum distance for spatial filter.
-  min_distance <- c(1000, 2000)
-  num_points <- setNames(c(1000, 1000), min_distance)
+  min_distance <- c(2000)
+  num_points <- setNames(c(1000), min_distance)
 
   # Number of simulations.
-  num_simu <- 100
+  num_simu <- 10
   num_null <- 100
 
   #######################################
@@ -112,6 +112,7 @@ validating_maxent <- function(nbackground = 10000) {
       # Simulation loop.
       auc_index <- boyce_index <- tss_index <-
         pvalue_auc <- pvalue_boyce <- pvalue_tss <- numeric(num_simu)
+        results_indices <- list()
       for (simu in 1:num_simu) {
 
         cli::cli_alert_info(paste0("      Simulation ", simu, ", ",
@@ -147,13 +148,16 @@ validating_maxent <- function(nbackground = 10000) {
 
         # Indices.
         auc_index[simu] <- m@results["Training.AUC", ]
-        boyce_index[simu] <- ecospat::ecospat.boyce(pr, pr[1:np], nclass = 0, PEplot = FALSE, method = "pearson")$cor
+        boyce_index[simu] <- ecospat::ecospat.boyce(pr, pr[1:np], nclass = 20,
+                                                    PEplot = FALSE, method = "pearson")$cor
         tss_index[simu] <- ecospat::ecospat.max.tss(pr, v)$max.TSS
+        results_indices[[simu]] <- m@results
 
+        # print(modEvA::Boyce(obs=v,pred=pr, bin.width = .5, method = "pearson"))
         ##################################
 
         # Null model.
-        auc_null <- boyce_null <- numeric(num_null)
+        auc_null <- boyce_null <- tss_null <- numeric(num_null)
         cli::cli_progress_bar("Processing null model", total = num_null)
         for (inull in 1:num_null) {
 
@@ -171,13 +175,17 @@ validating_maxent <- function(nbackground = 10000) {
           df_rand <- rbind(as.data.frame(dfpx_rand), as.data.frame(bx_filtered))
 
           # Model.
-          v <- c(rep(1, nrow(dfpx_rand)), rep(0, nb))
+          npr <- nrow(dfpx_rand)
+          v <- c(rep(1, npr), rep(0, nb))
           m_null <- dismo::maxent(x = subset(df_rand, select = -c(x, y)), p = v)
           pr_null <- dismo::predict(m_null, subset(df_rand, select = -c(x, y)))
+          # modEvA::Boyce(obs=v,pred=pr_null, bin.width = .5, method = "pearson"))
+
           auc_null[inull] <- m_null@results["Training.AUC", ]
-          boyce_null[inull] <- ecospat::ecospat.boyce(pr_null, pr_null[1:np], nclass = 0,
-                                                      PEplot = FALSE, method = "spearman")$cor
+          boyce_null[inull] <- ecospat::ecospat.boyce(pr_null, pr_null[1:npr], nclass = 20,
+                                                      PEplot = FALSE, method = "pearson")$cor
           tss_null[inull] <- ecospat::ecospat.max.tss(pr_null, v)$max.TSS
+
         }
         cli::cli_progress_done()
 
@@ -185,18 +193,26 @@ validating_maxent <- function(nbackground = 10000) {
         pvalue_boyce[simu] <- sum(boyce_index[simu] < boyce_null)/num_null
         pvalue_tss[simu] <- sum(tss_index[simu] < tss_null)/num_null
 
-        cli::cli_alert_success(paste0("AUC p-value = ", pvalue_auc[simu], " --- Boyce p-value = ", pvalue_boyce[simu]))
-
       }
+
+        distancia[[as.character(mdist)]] <- list(auc = auc_index, boyce = boyce_index, tss = tss_index,
+                                                 pvalue_auc = pvalue_auc, pvalue_boyce = pvalue_boyce,
+                                                 pvalue_tss = pvalue_tss,
+                                                 results_indices = results_indices)
 
     }
 
-    distancia[[mdist]] <- list(auc = auc_index, boyce = boyce_index, tss = tss_index,
-                               pvalue_auc = pvalue_auc, pvalue_boyce = pvalue_boyce, pvalue_tss = pvalue_tss)
+    # cat("\n")
+    # print(c(AUC = mean(auc_index), SD = sd(auc_index)))
+    # print(c(TSS = mean(tss_index), SD = sd(tss_index)))
+    # print(c(Boyce = mean(boyce_index), SD = sd(boyce_index)))
+    # cat("\n")
+
+    resultados[[sp]] <- distancia
 
   }
 
-  resultados[[sp]] <- distancia
+
 
   saveRDS(resultados, "validating_maxent.rds")
 
