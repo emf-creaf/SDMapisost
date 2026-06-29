@@ -110,9 +110,9 @@ validating_maxent <- function(nbackground = 10000) {
       dfb <- cbind(as.data.frame(bx), terra::crds(bx))
 
       # Simulation loop.
-      auc_index <- boyce_index <- tss_index <-
-        pvalue_auc <- pvalue_boyce <- pvalue_tss <- numeric(num_simu)
-        results_indices <- list()
+      auc_index <- boyce_index <- tss_index <- numeric(num_simu)
+      auc_null <- boyce_null <- tss_null <- matrix(0, num_simu, num_null)
+      results_indices <- list()
       for (simu in 1:num_simu) {
 
         cli::cli_alert_info(paste0("      Simulation ", simu, ", ",
@@ -136,6 +136,9 @@ validating_maxent <- function(nbackground = 10000) {
           bx_filtered <- bx_filtered[1:num_points[as.character(mdist)], ]
         }
 
+        kk <- filter_spThin(dfp, min_dist = mdist/1000)
+browser()
+
         # Prepare data.
         np <- nrow(px_filtered)
         nb <- nrow(bx_filtered)
@@ -153,11 +156,9 @@ validating_maxent <- function(nbackground = 10000) {
         tss_index[simu] <- ecospat::ecospat.max.tss(pr, v)$max.TSS
         results_indices[[simu]] <- m@results
 
-        # print(modEvA::Boyce(obs=v,pred=pr, bin.width = .5, method = "pearson"))
         ##################################
 
         # Null model.
-        auc_null <- boyce_null <- tss_null <- numeric(num_null)
         cli::cli_progress_bar("Processing null model", total = num_null)
         for (inull in 1:num_null) {
 
@@ -179,34 +180,22 @@ validating_maxent <- function(nbackground = 10000) {
           v <- c(rep(1, npr), rep(0, nb))
           m_null <- dismo::maxent(x = subset(df_rand, select = -c(x, y)), p = v)
           pr_null <- dismo::predict(m_null, subset(df_rand, select = -c(x, y)))
-          # modEvA::Boyce(obs=v,pred=pr_null, bin.width = .5, method = "pearson"))
 
-          auc_null[inull] <- m_null@results["Training.AUC", ]
-          boyce_null[inull] <- ecospat::ecospat.boyce(pr_null, pr_null[1:npr], nclass = 20,
+          auc_null[simu, inull] <- m_null@results["Training.AUC", ]
+          boyce_null[simu, inull] <- ecospat::ecospat.boyce(pr_null, pr_null[1:npr], nclass = 20,
                                                       PEplot = FALSE, method = "pearson")$cor
-          tss_null[inull] <- ecospat::ecospat.max.tss(pr_null, v)$max.TSS
+          tss_null[simu, inull] <- ecospat::ecospat.max.tss(pr_null, v)$max.TSS
 
         }
         cli::cli_progress_done()
 
-        pvalue_auc[simu] <- sum(auc_index[simu] < auc_null)/num_null
-        pvalue_boyce[simu] <- sum(boyce_index[simu] < boyce_null)/num_null
-        pvalue_tss[simu] <- sum(tss_index[simu] < tss_null)/num_null
-
       }
 
         distancia[[as.character(mdist)]] <- list(auc = auc_index, boyce = boyce_index, tss = tss_index,
-                                                 pvalue_auc = pvalue_auc, pvalue_boyce = pvalue_boyce,
-                                                 pvalue_tss = pvalue_tss,
+                                                 auc_null = auc_null, boyce_null = boyce_null,
+                                                 tss_null = tss_null,
                                                  results_indices = results_indices)
-
     }
-
-    # cat("\n")
-    # print(c(AUC = mean(auc_index), SD = sd(auc_index)))
-    # print(c(TSS = mean(tss_index), SD = sd(tss_index)))
-    # print(c(Boyce = mean(boyce_index), SD = sd(boyce_index)))
-    # cat("\n")
 
     resultados[[sp]] <- distancia
 
