@@ -2,7 +2,11 @@
 
 export(distance_filter)
 export(extract_predictors)
+export(generate_random_points)
 export(get_predictors)
 export(get_presence)
+export(maxent_models)
+export(predict_maxent)
 export(select_variables)
 export(selecting_predictors)
+export(spatial_filter)

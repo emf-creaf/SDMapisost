@@ -1,5 +1,6 @@
 filter_spThin <- function(df, crs = 25830, min_dist, strictly = TRUE) {
 
+
   # Index.
   df$id <- 1:nrow(df)
 

@@ -32,11 +32,11 @@ validating_maxent <- function(nbackground = 10000) {
                    corine = file.path("C:/imidra", "corine/corine_2018/CORINE Madrid nivel 1.tif"),
                    hidro = file.path("C:/imidra", "hidro/distancia_hidro.tif"))
   names(carpetas$bioclim) <- paste0("bioclim_", 1:19)
-  x <- get_predictors(carpetas)
+  x_all <- get_predictors(carpetas)
 
   # Mask for valid locations.
   # terra::levels(x$categorical$corine)
-  corine_mask <- x$categorical$corine == 2 | x$categorical$corine == 3
+  corine_mask <- x_all$categorical$corine == 2 | x_all$categorical$corine == 3
   corine_mask[!corine_mask] <- NA
 
 
@@ -46,25 +46,12 @@ validating_maxent <- function(nbackground = 10000) {
                "Quercus coccifera", "Retama sphaerocarpa")
 
   # Minimum distance for spatial filter.
-  min_distance <- c(2000)
+  min_distance <- c(2) # In Km.
   num_points <- setNames(c(1000), min_distance)
 
   # Number of simulations.
   num_simu <- 10
   num_null <- 100
-
-  #######################################
-  # To be used below.
-  random_points <- function(mask, x, size) {
-    z <- terra::spatSample(mask, size = size, method = "random",
-                           xy = TRUE, exact = TRUE, na.rm = TRUE)
-    z <- terra::vect(z, geom = c("x", "y"), crs = "EPSG:25830")
-    z <- extract_predictors(z, x, verbose = FALSE)
-    z$category <- NULL
-    z <- terra::na.omit(z, field = "")
-    return(z)
-  }
-  #######################################
 
   # Proportion of training points.
   train_prop <- .7
@@ -75,39 +62,26 @@ validating_maxent <- function(nbackground = 10000) {
 
     cli::cli_alert_info(paste0("Species ", sp))
 
-    # # Presence data.
-    # p <- get_presence(folder, sp)
-    #
-    # # Check that presences are in valid locations. Otherwise, remove.
-    # p <- cbind(p, terra::extract(corine_mask, p, method = "simple"))
-    # p <- p[p$category, ]
-    # p <- p[, 0]
-    #
-    # # Extract predictors at 'p' locations.
-    # px <- extract_predictors(p, x)
-
-
     # Presence data.
     px <- terra::unwrap(out[[sp]]$selected_data)
     px <- terra::na.omit(px, field = "")
 
+    # Remove unneeded predictors for this species.
+    # x <- x_all[, names(px)]
+
     distancia <- list()
     for (mdist in min_distance) {
 
-      cli::cli_alert_info(paste0("   Minimum distance ", mdist, " meters"))
+      cli::cli_alert_info(paste0("   Minimum distance ", mdist, " kilometers"))
 
-      # Extract background points.
-      bx <- random_points(corine_mask, x, nbackground)
-      # b <- terra::spatSample(corine_mask, size = nbackground, method = "random",
-      #                        xy = TRUE, exact = TRUE, na.rm = TRUE)
-      # b <- terra::vect(b, geom = c("x", "y"), crs = "EPSG:25830")
-      # bx <- extract_predictors(b, x, verbose = FALSE)
-      # bx$category <- NULL
-
-      # Remove unneeded predictors and build data.frames.
+      # Extract background points and remove unneeded predictors.
+      bx <- generate_random_points(corine_mask, x_all, nbackground)
       bx <- bx[, names(px)]
-      dfp <- cbind(as.data.frame(px), terra::crds(px))
-      dfb <- cbind(as.data.frame(bx), terra::crds(bx))
+
+      # # Remove unneeded predictsor and build data.frames.
+      # bx <- bx[, names(px)]
+      # dfp <- cbind(as.data.frame(px), terra::crds(px))
+      # dfb <- cbind(as.data.frame(bx), terra::crds(bx))
 
       # Simulation loop.
       auc_index <- boyce_index <- tss_index <- numeric(num_simu)
@@ -120,23 +94,27 @@ validating_maxent <- function(nbackground = 10000) {
 
         # Spatial filter of presence points.
         if (mdist == 0) {
-          px_filtered <- dfp
-          bx_filtered <- dfb
+          px_filtered <- px
+          bx_filtered <- bx
 
         } else {
-          px_filtered <- distance_filter(dfp, min_dist = mdist, columns = c("x", "y"), verbose = FALSE)
+          # px_filtered <- distance_filter(dfp, min_dist = mdist, columns = c("x", "y"), verbose = FALSE)
+
+          browser()
+          px_filtered <- spatial_filter(px, min_dist = mdist, crs = "epsg:25830")
+          bx_filtered <- spatial_filter(bx, min_dist = mdist, crs = "epsg:25830")
+
 
           # Spatial filter of background points.
-          bx_filtered <- distance_filter(dfb, min_dist = mdist, columns = c("x", "y"), verbose = FALSE)
-
-          while (nrow(bx_filtered) < num_points[as.character(mdist)]) {
-            cli::cli_alert("         New attempt")
-            bx_filtered <- distance_filter(dfb, min_dist = mdist, columns = c("x", "y"), verbose = FALSE)
-          }
-          bx_filtered <- bx_filtered[1:num_points[as.character(mdist)], ]
+          # bx_filtered <- distance_filter(dfb, min_dist = mdist, columns = c("x", "y"), verbose = FALSE)
+          #
+          # while (nrow(bx_filtered) < num_points[as.character(mdist)]) {
+          #   cli::cli_alert("         New attempt")
+          #   bx_filtered <- distance_filter(dfb, min_dist = mdist, columns = c("x", "y"), verbose = FALSE)
+          # }
+          # bx_filtered <- bx_filtered[1:num_points[as.character(mdist)], ]
         }
 
-        kk <- filter_spThin(dfp, min_dist = mdist/1000)
 browser()
 
         # Prepare data.
@@ -165,7 +143,7 @@ browser()
           cli::cli_progress_update()
 
           # Random presence points.
-          px_rand <- random_points(corine_mask, x, nrow(dfp))
+          px_rand <- generate_random_points(corine_mask, x, nrow(dfp))
           px_rand <- px_rand[, names(px)]
           dfpx_rand <- cbind(as.data.frame(px_rand), terra::crds(px_rand))
 

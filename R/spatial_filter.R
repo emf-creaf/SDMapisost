@@ -1,0 +1,49 @@
+#' Title
+#'
+#' @param p
+#' @param min_dist
+#' @param crs
+#' @param num_simu
+#'
+#' @returns
+#' @export
+#'
+#' @examples
+spatial_filter <- function(p, min_dist = 20, crs = NULL, num_simu = 10) {
+
+  # Checks.
+  if (!is(p, "SpatVector")) cli::cli_abort("Input 'p' must be a SpatVect object")
+
+
+  # Reproject if needed.
+  if (!terra::same.crs(p, "epsg:4326")) p <- terra::project(p, "EPSG:4326")
+
+
+  # Transform to data.frame. A fake "species" column is added.
+  p_coord <- terra::geom(p)
+  df <- data.frame(
+    id = p_coord[, "geom"],
+    species = rep("A", nrow(p)),
+    long = p_coord[, "x"],
+    lat = p_coord[, "y"]
+  )
+
+  # Spatial thinning.
+  df_thinned <- spThin::thin(
+    loc.data = df,
+    lat.col = "lat", long.col = "long",
+    spec.col = "species",
+    thin.par = min_dist,
+    reps = 1, locs.thinned.list.return = TRUE,
+    write.files = FALSE, write.log.file = FALSE,
+    verbose = FALSE
+  )[[1]]
+
+
+  # Select rows and transform, if needed.
+  p <- p[as.numeric(rownames(df_thinned)), ]
+  if (!is.null(crs)) p <- terra::project(p, crs)
+
+
+  return(df)
+}
