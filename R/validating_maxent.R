@@ -100,7 +100,7 @@ validating_maxent <- function(nbackground = 10000) {
         } else {
           # px_filtered <- distance_filter(dfp, min_dist = mdist, columns = c("x", "y"), verbose = FALSE)
 
-          browser()
+
           px_filtered <- spatial_filter(px, min_dist = mdist, crs = "epsg:25830")
           bx_filtered <- spatial_filter(bx, min_dist = mdist, crs = "epsg:25830")
 
@@ -115,16 +115,18 @@ validating_maxent <- function(nbackground = 10000) {
           # bx_filtered <- bx_filtered[1:num_points[as.character(mdist)], ]
         }
 
-browser()
 
-        # Prepare data.
-        np <- nrow(px_filtered)
-        nb <- nrow(bx_filtered)
-        v <- c(rep(1, np), rep(0, nb))
-        df <- rbind(as.data.frame(px_filtered), as.data.frame(bx_filtered))
+
+        # # Prepare data.
+        # np <- nrow(px_filtered)
+        # nb <- nrow(bx_filtered)
+        # v <- c(rep(1, np), rep(0, nb))
+        # df <- rbind(as.data.frame(px_filtered), as.data.frame(bx_filtered))
 
         # MaxEnt model.
-        m <- dismo::maxent(x = subset(df, select = -c(x, y)), p = v)
+        # m <- dismo::maxent(x = subset(df, select = -c(x, y)), p = v)
+m <- maxent_fit(px_filtered, bx_filtered)
+browser()
         pr <- dismo::predict(m, subset(df, select = -c(x, y)))
 
         # Indices.

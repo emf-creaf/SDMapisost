@@ -45,5 +45,5 @@ spatial_filter <- function(p, min_dist = 20, crs = NULL, num_simu = 10) {
   if (!is.null(crs)) p <- terra::project(p, crs)
 
 
-  return(df)
+  return(p)
 }
