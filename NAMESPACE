@@ -2,10 +2,12 @@
 
 export(distance_filter)
 export(extract_predictors)
+export(filter_raster_list)
 export(generate_random_points)
 export(get_predictors)
 export(get_presence)
 export(maxent_fit)
+export(maxent_null_simu)
 export(maxent_predict)
 export(select_variables)
 export(selecting_predictors)

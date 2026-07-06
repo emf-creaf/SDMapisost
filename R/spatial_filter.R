@@ -1,7 +1,7 @@
 #' Title
 #'
 #' @param p
-#' @param min_dist
+#' @param min_dist \code{numeric} value, minimum distance in Km.
 #' @param crs
 #' @param num_simu
 #'
@@ -9,7 +9,7 @@
 #' @export
 #'
 #' @examples
-spatial_filter <- function(p, min_dist = 20, crs = NULL, num_simu = 10) {
+spatial_filter <- function(p, min_dist = 20, num_simu = 10) {
 
   # Checks.
   if (!is(p, "SpatVector")) cli::cli_abort("Input 'p' must be a SpatVect object")
@@ -42,7 +42,7 @@ spatial_filter <- function(p, min_dist = 20, crs = NULL, num_simu = 10) {
 
   # Select rows and transform, if needed.
   p <- p[as.numeric(rownames(df_thinned)), ]
-  if (!is.null(crs)) p <- terra::project(p, crs)
+  if (!terra::same.crs(p, "epsg:25830")) p <- terra::project(p, "epsg:25830")
 
 
   return(p)

@@ -1,5 +1,10 @@
 validating_maxent <- function(nbackground = 10000) {
 
+
+  library(rJava)
+  .jinit()
+
+
   # Check.
   #
   #
@@ -34,6 +39,7 @@ validating_maxent <- function(nbackground = 10000) {
   names(carpetas$bioclim) <- paste0("bioclim_", 1:19)
   x_all <- get_predictors(carpetas)
 
+
   # Mask for valid locations.
   # terra::levels(x$categorical$corine)
   corine_mask <- x_all$categorical$corine == 2 | x_all$categorical$corine == 3
@@ -48,6 +54,7 @@ validating_maxent <- function(nbackground = 10000) {
   # Minimum distance for spatial filter.
   min_distance <- c(2) # In Km.
   num_points <- setNames(c(1000), min_distance)
+
 
   # Number of simulations.
   num_simu <- 10
@@ -66,8 +73,8 @@ validating_maxent <- function(nbackground = 10000) {
     px <- terra::unwrap(out[[sp]]$selected_data)
     px <- terra::na.omit(px, field = "")
 
-    # Remove unneeded predictors for this species.
-    # x <- x_all[, names(px)]
+    # Remove unneeded rasters.
+    x <- filter_raster_list(x_all, names(px))
 
     distancia <- list()
     for (mdist in min_distance) {
@@ -75,10 +82,9 @@ validating_maxent <- function(nbackground = 10000) {
       cli::cli_alert_info(paste0("   Minimum distance ", mdist, " kilometers"))
 
       # Extract background points and remove unneeded predictors.
-      bx <- generate_random_points(corine_mask, x_all, nbackground)
-      bx <- bx[, names(px)]
+      bx <- generate_random_points(corine_mask, x, nbackground)
 
-      # # Remove unneeded predictsor and build data.frames.
+      # # Remove unneeded predictors and build data.frames.
       # bx <- bx[, names(px)]
       # dfp <- cbind(as.data.frame(px), terra::crds(px))
       # dfb <- cbind(as.data.frame(bx), terra::crds(bx))
@@ -101,8 +107,8 @@ validating_maxent <- function(nbackground = 10000) {
           # px_filtered <- distance_filter(dfp, min_dist = mdist, columns = c("x", "y"), verbose = FALSE)
 
 
-          px_filtered <- spatial_filter(px, min_dist = mdist, crs = "epsg:25830")
-          bx_filtered <- spatial_filter(bx, min_dist = mdist, crs = "epsg:25830")
+          px_filtered <- spatial_filter(px, min_dist = mdist)
+          bx_filtered <- spatial_filter(bx, min_dist = mdist)
 
 
           # Spatial filter of background points.
@@ -117,17 +123,17 @@ validating_maxent <- function(nbackground = 10000) {
 
 
 
-        # # Prepare data.
-        # np <- nrow(px_filtered)
-        # nb <- nrow(bx_filtered)
-        # v <- c(rep(1, np), rep(0, nb))
+        # Prepare data.
+        np <- nrow(px_filtered)
+        nb <- nrow(bx_filtered)
+        v <- c(rep(1, np), rep(0, nb))
         # df <- rbind(as.data.frame(px_filtered), as.data.frame(bx_filtered))
 
         # MaxEnt model.
         # m <- dismo::maxent(x = subset(df, select = -c(x, y)), p = v)
-m <- maxent_fit(px_filtered, bx_filtered)
-browser()
-        pr <- dismo::predict(m, subset(df, select = -c(x, y)))
+
+        m <- maxent_fit(px_filtered, bx_filtered)
+        pr <- maxent_predict(m, rbind(px_filtered, bx_filtered))
 
         # Indices.
         auc_index[simu] <- m@results["Training.AUC", ]
@@ -139,6 +145,10 @@ browser()
         ##################################
 
         # Null model.
+browser()
+        df_simu <- maxent_null_simu(corine_mask, x, np, bx_filtered, min_dist = mdist)
+
+
         cli::cli_progress_bar("Processing null model", total = num_null)
         for (inull in 1:num_null) {
 
