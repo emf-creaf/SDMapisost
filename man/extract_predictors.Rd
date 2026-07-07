@@ -2,12 +2,12 @@
 % Please edit documentation in R/extract_predictors.R
 \name{extract_predictors}
 \alias{extract_predictors}
-\title{Title}
+\title{Extract values from a SpatRaster list.}
 \usage{
-extract_predictors(p, x, verbose = TRUE)
+extract_predictors(p, raster_list, verbose = TRUE)
 }
 \description{
-Title
+Extract values from a SpatRaster list.
 }
 \examples{
 folder <- "C:/imidra"

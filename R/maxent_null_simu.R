@@ -14,7 +14,7 @@
 #' @export
 #'
 #' @examples
-maxent_null_simu <- function(mask, x, num_presence, background, min_dist = 20, num_null = 20, size = 1000, verbose = TRUE) {
+maxent_null_simu <- function(mask, raster_list, num_presence, background, min_dist = 1, num_null = 100, size = 1000, verbose = TRUE) {
 
   # Checks.
   if (size <= num_presence) size <- num_presence * 10
@@ -28,7 +28,7 @@ maxent_null_simu <- function(mask, x, num_presence, background, min_dist = 20, n
     if (verbose) cli::cli_progress_update()
 
     # Random presence points.
-    prand <- generate_random_points(mask, x, size)
+    prand <- generate_random_points(mask, raster_list, size)
 
     # Filtering spatial data.
     prand <- spatial_filter(prand, min_dist = min_dist)
@@ -37,6 +37,8 @@ maxent_null_simu <- function(mask, x, num_presence, background, min_dist = 20, n
     if (nrow(prand) > num_presence) {
       j <- sample(nrow(prand))[1:num_presence]
       prand <- prand[j, ]
+    } else {
+      cli::cli_alert(paste0("Number of null presence points ", nrow(prand), " is smaller than the original number"))
     }
 
 

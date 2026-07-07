@@ -1,34 +1,7 @@
 validating_maxent <- function(nbackground = 10000) {
 
 
-  library(rJava)
-  .jinit()
-
-
-  # Check.
-  #
-  #
-  # species <- names(x)
-  #
-  #
-  # for (sp in species) {
-  #   y <- x[[sp]]
-  #
-  # }
-
-
-  # pxy <- terra::geom(p)
-  # df <- as.data.frame(p)
-  # # kk <- ncf::correlog(pxy[, "x"],pxy[, "y"], as.matrix(df), increment = 1000)
-  # x <- pxy[, "x"]
-  # y <- pxy[, "y"]
-  # ow <- spatstat.geom::owin(xrange = c(min(x), max(x)), yrange = c(min(y), max(y)))
-  # ppp <- spatstat.geom::ppp(x, y, ow)
-  # Ripley_L <- spatstat.explore::Kest(ppp)
-  # l_envelope <- spatstat.explore::envelope(ppp, fun = spatstat.explore::Kest, nsim = 99, verbose = FALSE)
-  # plot(l_envelope)
-
-  # out <- selecting_predictors(save = TRUE)
+  # Recover predictor selection calculations.
   out <- base::readRDS("final_predictors.rds")
 
   # Read predictor data.
@@ -37,14 +10,11 @@ validating_maxent <- function(nbackground = 10000) {
                    corine = file.path("C:/imidra", "corine/corine_2018/CORINE Madrid nivel 1.tif"),
                    hidro = file.path("C:/imidra", "hidro/distancia_hidro.tif"))
   names(carpetas$bioclim) <- paste0("bioclim_", 1:19)
-  x_all <- get_predictors(carpetas)
-
+  raster_list_all <- get_predictors(carpetas)
 
   # Mask for valid locations.
-  # terra::levels(x$categorical$corine)
-  corine_mask <- x_all$categorical$corine == 2 | x_all$categorical$corine == 3
+  corine_mask <- raster_list_all$categorical$corine == 2 | raster_list_all$categorical$corine == 3
   corine_mask[!corine_mask] <- NA
-
 
   # Species.
   folder <- "C:/imidra"
@@ -55,9 +25,8 @@ validating_maxent <- function(nbackground = 10000) {
   min_distance <- c(2) # In Km.
   num_points <- setNames(c(1000), min_distance)
 
-
   # Number of simulations.
-  num_simu <- 10
+  num_simu <- 20
   num_null <- 100
 
   # Proportion of training points.
@@ -70,11 +39,11 @@ validating_maxent <- function(nbackground = 10000) {
     cli::cli_alert_info(paste0("Species ", sp))
 
     # Presence data.
-    px <- terra::unwrap(out[[sp]]$selected_data)
-    px <- terra::na.omit(px, field = "")
+    presence <- terra::unwrap(out[[sp]]$selected_data)
+    presence <- terra::na.omit(presence, field = "")
 
     # Remove unneeded rasters.
-    x <- filter_raster_list(x_all, names(px))
+    raster_list_selected <- select_raster_list(raster_list_all, names(presence))
 
     distancia <- list()
     for (mdist in min_distance) {
@@ -82,16 +51,11 @@ validating_maxent <- function(nbackground = 10000) {
       cli::cli_alert_info(paste0("   Minimum distance ", mdist, " kilometers"))
 
       # Extract background points and remove unneeded predictors.
-      bx <- generate_random_points(corine_mask, x, nbackground)
-
-      # # Remove unneeded predictors and build data.frames.
-      # bx <- bx[, names(px)]
-      # dfp <- cbind(as.data.frame(px), terra::crds(px))
-      # dfb <- cbind(as.data.frame(bx), terra::crds(bx))
+      background <- generate_random_points(corine_mask, raster_list_selected, nbackground)
 
       # Simulation loop.
       auc_index <- boyce_index <- tss_index <- numeric(num_simu)
-      auc_null <- boyce_null <- tss_null <- matrix(0, num_simu, num_null)
+      indices_null <- list()
       results_indices <- list()
       for (simu in 1:num_simu) {
 
@@ -100,98 +64,45 @@ validating_maxent <- function(nbackground = 10000) {
 
         # Spatial filter of presence points.
         if (mdist == 0) {
-          px_filtered <- px
-          bx_filtered <- bx
+          presence_filtered <- presence
+          background_filtered <- background
 
         } else {
-          # px_filtered <- distance_filter(dfp, min_dist = mdist, columns = c("x", "y"), verbose = FALSE)
+          presence_filtered <- spatial_filter(presence, min_dist = mdist)
+          background_filtered <- spatial_filter(background, min_dist = mdist)
 
-
-          px_filtered <- spatial_filter(px, min_dist = mdist)
-          bx_filtered <- spatial_filter(bx, min_dist = mdist)
-
-
-          # Spatial filter of background points.
-          # bx_filtered <- distance_filter(dfb, min_dist = mdist, columns = c("x", "y"), verbose = FALSE)
-          #
-          # while (nrow(bx_filtered) < num_points[as.character(mdist)]) {
-          #   cli::cli_alert("         New attempt")
-          #   bx_filtered <- distance_filter(dfb, min_dist = mdist, columns = c("x", "y"), verbose = FALSE)
-          # }
-          # bx_filtered <- bx_filtered[1:num_points[as.character(mdist)], ]
         }
 
-
-
         # Prepare data.
-        np <- nrow(px_filtered)
-        nb <- nrow(bx_filtered)
-        v <- c(rep(1, np), rep(0, nb))
-        # df <- rbind(as.data.frame(px_filtered), as.data.frame(bx_filtered))
+        npresence <- nrow(presence_filtered)
+        nbackground <- nrow(background_filtered)
+        indicator <- c(rep(1, npresence), rep(0, nbackground))
 
-        # MaxEnt model.
-        # m <- dismo::maxent(x = subset(df, select = -c(x, y)), p = v)
-
-        m <- maxent_fit(px_filtered, bx_filtered)
-        pr <- maxent_predict(m, rbind(px_filtered, bx_filtered))
+        # Run model and compute prediction.
+        m <- maxent_fit(presence_filtered, background_filtered)
+        pr <- maxent_predict(m, rbind(presence_filtered, background_filtered))
 
         # Indices.
         auc_index[simu] <- m@results["Training.AUC", ]
-        boyce_index[simu] <- ecospat::ecospat.boyce(pr, pr[1:np], nclass = 20,
+        boyce_index[simu] <- ecospat::ecospat.boyce(pr, pr[1:npresence], nclass = 20,
                                                     PEplot = FALSE, method = "pearson")$cor
-        tss_index[simu] <- ecospat::ecospat.max.tss(pr, v)$max.TSS
+        tss_index[simu] <- ecospat::ecospat.max.tss(pr, indicator)$max.TSS
         results_indices[[simu]] <- m@results
 
         ##################################
 
-        # Null model.
-browser()
-        df_simu <- maxent_null_simu(corine_mask, x, np, bx_filtered, min_dist = mdist)
-
-
-        cli::cli_progress_bar("Processing null model", total = num_null)
-        for (inull in 1:num_null) {
-
-          cli::cli_progress_update()
-
-          # Random presence points.
-          px_rand <- generate_random_points(corine_mask, x, nrow(dfp))
-          px_rand <- px_rand[, names(px)]
-          dfpx_rand <- cbind(as.data.frame(px_rand), terra::crds(px_rand))
-
-          # Spatial filter.
-          dfpx_rand <- distance_filter(dfpx_rand, min_dist = mdist, columns = c("x", "y"), verbose = FALSE)
-
-          # New data.frame.
-          df_rand <- rbind(as.data.frame(dfpx_rand), as.data.frame(bx_filtered))
-
-          # Model.
-          npr <- nrow(dfpx_rand)
-          v <- c(rep(1, npr), rep(0, nb))
-          m_null <- dismo::maxent(x = subset(df_rand, select = -c(x, y)), p = v)
-          pr_null <- dismo::predict(m_null, subset(df_rand, select = -c(x, y)))
-
-          auc_null[simu, inull] <- m_null@results["Training.AUC", ]
-          boyce_null[simu, inull] <- ecospat::ecospat.boyce(pr_null, pr_null[1:npr], nclass = 20,
-                                                      PEplot = FALSE, method = "pearson")$cor
-          tss_null[simu, inull] <- ecospat::ecospat.max.tss(pr_null, v)$max.TSS
-
-        }
-        cli::cli_progress_done()
-
+        # Indices from null models.
+        indices_null[[simu]] <- maxent_null_simu(mask = corine_mask,
+                                                 raster_list_selected, npresence, background_filtered, min_dist = mdist)
       }
 
         distancia[[as.character(mdist)]] <- list(auc = auc_index, boyce = boyce_index, tss = tss_index,
-                                                 auc_null = auc_null, boyce_null = boyce_null,
-                                                 tss_null = tss_null,
-                                                 results_indices = results_indices)
+                                                 indices_null = indices_null)
     }
 
     resultados[[sp]] <- distancia
 
   }
-
-
 
   saveRDS(resultados, "validating_maxent.rds")
 

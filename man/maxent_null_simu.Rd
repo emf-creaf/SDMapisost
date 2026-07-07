@@ -6,11 +6,11 @@
 \usage{
 maxent_null_simu(
   mask,
-  x,
+  raster_list,
   num_presence,
   background,
-  min_dist = 20,
-  num_null = 20,
+  min_dist = 1,
+  num_null = 100,
   size = 1000,
   verbose = TRUE
 )
