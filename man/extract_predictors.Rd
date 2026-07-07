@@ -6,6 +6,9 @@
 \usage{
 extract_predictors(p, raster_list, verbose = TRUE)
 }
+\arguments{
+\item{verbose}{\code{logical}, if set to TRUE a progress message is printed on screen.}
+}
 \description{
 Extract values from a SpatRaster list.
 }
