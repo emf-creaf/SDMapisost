@@ -2,7 +2,7 @@
 #'
 #' @param p
 #' @param raster_list
-#' @param verbose
+#' @param verbose \code{logical}, if set to TRUE a progress message is printed on screen.
 #'
 #' @returns
 #' @export
