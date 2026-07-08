@@ -16,9 +16,7 @@ maxent_fit <- function(x, p) {
 
 
   # Prepare data.
-  nx <- nrow(x)
-  np <- nrow(p)
-  v <- c(rep(1, nx), rep(0, np))
+  v <- c(rep(1, nrow(x)), rep(0, nrow(p)))
   df <- rbind(as.data.frame(x), as.data.frame(p))
 
 

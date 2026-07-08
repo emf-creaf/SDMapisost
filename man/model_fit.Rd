@@ -4,7 +4,7 @@
 \alias{model_fit}
 \title{Title}
 \usage{
-model_fit(x, p, method = "maxent", control = list())
+model_fit(x, p, method = "maxent", control = NULL, args = NULL)
 }
 \description{
 Title
