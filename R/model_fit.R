@@ -13,10 +13,9 @@
 model_fit <- function(x, p, method = "maxent", control = NULL, args = NULL) {
 
   # Checks.
-  if (!is(x, "SpatVector") | !is(p, "SpatVector")) cli::cli_abort("Input 'p' must be a SpatVect object")
+  if (!is(x, "SpatVector") | !is(p, "SpatVector")) cli::cli_abort("Inputs 'x' or 'p' must be SpatVect objects")
   if (!setequal(names(x), names(p))) cli::cli_abort("Inputs 'x' and 'p' must have the same columns")
   if (!terra::same.crs(x, p)) cli::cli_abort("Inputs 'x' and 'p' must have the same crs")
-  method <- tolower(method)
   if (!(tolower(method) %in% c("rf", "maxent"))) cli::cli_abort("Input 'method' must be 'rf' or 'maxent")
 
   return(.model_fit(x, p, method, control, args))
@@ -27,6 +26,7 @@ model_fit <- function(x, p, method = "maxent", control = NULL, args = NULL) {
 .model_fit <- function(x, p, method = "maxent", control = NULL, args = NULL) {
 
   # Default values for the control list.
+  method <- tolower(method)
   if (method == "rf") {
     if (!is.null(control)) {
       default_control <- list(num.trees = 500,

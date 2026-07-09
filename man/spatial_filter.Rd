@@ -4,7 +4,7 @@
 \alias{spatial_filter}
 \title{Title}
 \usage{
-spatial_filter(p, min_dist = 20, num_simu = 10)
+spatial_filter(p, min_dist = 1, num_simu = 10)
 }
 \arguments{
 \item{min_dist}{\code{numeric} value, minimum distance in Km.}

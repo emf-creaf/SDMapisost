@@ -9,7 +9,7 @@
 #' @export
 #'
 #' @examples
-spatial_filter <- function(p, min_dist = 20, num_simu = 10) {
+spatial_filter <- function(p, min_dist = 1, num_simu = 10) {
 
   # Checks.
   if (!is(p, "SpatVector")) cli::cli_abort("Input 'p' must be a SpatVect object")
