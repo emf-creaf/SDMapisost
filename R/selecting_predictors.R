@@ -27,7 +27,7 @@ selecting_predictors <- function(save = TRUE) {
   out <- list()
 
   for (sp in species) {
-    p <- get_presence(folder, sp)
+    p <- get_presence(folder, sp, "EPSG:25830")
 
     #' # Extract predictors at 'p' locations.
     y <- extract_predictors(p, x)

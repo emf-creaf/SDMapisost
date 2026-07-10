@@ -24,7 +24,7 @@ test_that("Multiple models and related functions", {
   background <- generate_random_points(corine_mask, raster_list_selected, nbackground)
   expect_equal(nrow(background), nbackground)
 
-  # Model fit.
+  # Correct fits.
   num_models <- 10
   x <- replicate(num_models, presence_Earborea)
   p <- replicate(num_models, background)
@@ -33,4 +33,13 @@ test_that("Multiple models and related functions", {
   test_maxent <- sapply(m, function(z) "MaxEnt" %in% class(z))
   expect_all_true(test_maxent)
 
+  # Wrong fits.
+  x <- replicate(num_models, presence_Earborea)
+  p <- replicate(7, background)
+  expect_error(multiple_models_fit(x, p, verbose = FALSE))
+
+  expect_error(multiple_models_fit(x, p, method = "", verbose = FALSE))
+  expect_error(multiple_models_fit(x, p, method = "nothing", verbose = FALSE))
+  expect_error(multiple_models_fit(x, p, args = "nothing", verbose = FALSE))
+  expect_error(multiple_models_fit(x, p, control = list(), verbose = FALSE))
 })
