@@ -31,7 +31,9 @@ get_presence <- function(path, species, crs = NULL, verbose = TRUE) {
   # Retrieve presence data for species.
   if (verbose) cli::cli_alert_info(paste0("Retreaving presence data for ", species))
   species <- tolower(trimws(species))
-  x <- df[, c("id_unique_code", "plot", "coordx", "coordy")]
+  x <- df |>
+    dplyr::select(id_unique_code, plot, coordx, coordy) |>
+    as.data.frame()
   x$species_exists <- sapply(df$understory, function(z) {
     zz <- z$shrub[[1]]
     if (is.data.frame(zz) && nrow(zz) > 0) {

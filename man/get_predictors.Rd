@@ -4,17 +4,16 @@
 \alias{get_predictors}
 \title{Predictor variables at presence locations.}
 \usage{
-get_predictors(paths, verbose = TRUE)
+get_predictors(path, crs = NULL, verbose = TRUE)
 }
 \arguments{
-\item{verbose}{\code{logical}, if TRUE progress information is produced.}
-
-\item{folder}{\code{character} string with the root name of the folder with the data.}
-
-\item{species}{\code{character} string with the full name of the species.}
+\item{crs}{\code{character} string containing the EPSG code (in the form "EPSG:####) of the
+coordinate reference system all raster should be projected to. If not given, or set to NULL,
+no projection will be carried out.
+#' @param verbose \code{logical}, if TRUE progress information is produced.}
 }
 \value{
-A \code{terra} SpatVector object.
+A \code{terra} SpatRasterCollection object.
 }
 \description{
 \code{get_predictors} extracts the value of the different predictor variables
@@ -23,10 +22,6 @@ species.
 }
 \examples{
 # Absolute paths to files.
-carpetas <- list(mdt = file.path("C:/imidra", "mdt/mdt_madrid.tif"),
-bioclim = file.path("C:/imidra/bioclim", paste0("historico/wc2.1_10m_bio/wc2.1_10m_bio_", 1:19, ".tif")),
-corine = file.path("C:/imidra", "corine/corine_2018/CORINE Madrid nivel 1.tif"),
-hidro = file.path("C:/imidra", "hidro/distancia_hidro.tif"))
 
 # Name the bioclimatic variables.
 names(carpetas$bioclim) <- paste0("bioclim_", 1:19)

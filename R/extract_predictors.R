@@ -1,7 +1,7 @@
 #' Extract values from a SpatRaster list.
 #'
 #' @param p
-#' @param raster_list
+#' @param x
 #' @param verbose \code{logical}, if set to TRUE a progress message is printed on screen.
 #'
 #' @returns
@@ -26,28 +26,33 @@
 #'
 #' # Extract predictors at 'p' locations.
 #' y <- extract_predictors(p, x)
-extract_predictors <- function(p, raster_list, verbose = TRUE) {
+extract_predictors <- function(p, x, verbose = TRUE) {
 
   # Checks.
-  if (!(any(c("SpatVector", "data.frame") %in% class(p)))) cli::cli_abort("Input 'p' must be a 'terra' object or a 'data.frame'")
-
+  if (!("SpatVector" %in% class(p))) cli::cli_abort("Input 'p' must be a 'SpatVector' object")
+  crs <- terra::crs(p)
   name_elements <- c("terrain", "climate", "distances", "categorical")
+  if (!all(name_elements %in% names(x))) cli::cli_abort("Wrong elements in input list 'x'")
   for (i in name_elements) {
-    if (!is.null(raster_list[[i]])) {
-      if (any(is.null(names(raster_list[[i]])))) cli::cli_abort(paste0("All elements in ", i, " of input list 'raster_list' must have a name"))
+    y <- x[[i]]
+    if (length(y) > 0) {
+      if (!all_named(y)) cli::cli_abort(paste0("All elements in the ", i, " element of input list 'x', if they exist, must have a name"))
+      for (j in names(y)) {
+        if (!terra::same.crs(p, y[[j]])) cli::cli_abort("All elements in 'x' and 'p' must have the same crs")
+      }
     }
   }
 
 
   # Extracting predictor data for p locations.
   for (i in name_elements) {
-    if (!is.null(raster_list[[i]])) {
+    if (!is.null(x[[i]])) {
       if (verbose) cli::cli_alert_info(paste0(" Extracting ", i, " data"))
-      x <- raster_list[[i]]
-      for (j in names(x)) {
+      y <- x[[i]]
+      for (j in names(y)) {
         if (verbose) cli::cli_alert_info(paste0(" -> ", j))
-        method <- ifelse(is.factor(x[[j]]), "simple", "bilinear")
-        p[[j]] <- terra::extract(x[[j]], p, ID = FALSE, method = method)
+        method <- ifelse(is.factor(y[[j]]), "simple", "bilinear")
+        p[[j]] <- terra::extract(y[[j]], p, ID = FALSE, method = method)
       }
     }
   }

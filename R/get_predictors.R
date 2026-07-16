@@ -12,16 +12,12 @@
 #' #' @param verbose \code{logical}, if TRUE progress information is produced.
 #'
 #' @returns
-#' A \code{terra} SpatVector object.
+#' A \code{terra} SpatRasterCollection object.
 #'
 #' @export
 #'
 #' @examples
 #' # Absolute paths to files.
-#' path <- list(mdt = file.path("C:/imidra", "mdt/mdt_madrid.tif"),
-#' bioclim = file.path("C:/imidra/bioclim", paste0("historico/wc2.1_10m_bio/wc2.1_10m_bio_", 1:19, ".tif")),
-#' corine = file.path("C:/imidra", "corine/corine_2018/CORINE Madrid nivel 1.tif"),
-#' hidro = file.path("C:/imidra", "hidro/distancia_hidro.tif"))
 #'
 #' # Name the bioclimatic variables.
 #' names(carpetas$bioclim) <- paste0("bioclim_", 1:19)
@@ -72,10 +68,14 @@ get_predictors <- function(path, crs = NULL, verbose = TRUE) {
   # Categorical (normally, land use/cover) variables.
   if (!is.null(path$categorical) | path$categorical != "") {
     if (verbose) cli::cli_alert_info("Reading categorical data")
-    categ <- terra::rast(path[["categorical"]])
-    if (!is.null(crs)) {
-      if (!terra::same.crs(categ, crs)) categ <- terra::project(categ, crs, wopt = list(progress = verbose))
-    }
+    x <- path[["categorical"]]
+    categ <- sapply(names(x), function(i) {
+      y <- terra::rast(x[[i]])
+      if (!is.null(crs)) {
+        if (!terra::same.crs(y, crs)) y <- terra::project(y, crs, wopt = list(progress = verbose))
+      }
+      terra::as.factor(y)
+    })
   } else {
     categ <- NULL
   }

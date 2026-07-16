@@ -1,8 +1,8 @@
 test_that("Multiple models and related functions", {
 
   # Presence data.
-  data(presence_Earborea)
-  presence_Earborea <- terra::unwrap(presence_Earborea)
+  data(presence_data)
+  presence_data <- terra::unwrap(presence_data$`Erica arborea`$selected_data)
 
   # Load mask.
   data(corine_mask)
@@ -17,7 +17,7 @@ test_that("Multiple models and related functions", {
   }
 
   # Select predictors.
-  raster_list_selected <- select_raster_list(raster_list_all, names(presence_Earborea))
+  raster_list_selected <- select_raster_list(raster_list_all, names(presence_data))
 
   # Background points.
   nbackground <- 1000
@@ -26,7 +26,7 @@ test_that("Multiple models and related functions", {
 
   # Correct fits.
   num_models <- 10
-  x <- replicate(num_models, presence_Earborea)
+  x <- replicate(num_models, presence_data)
   p <- replicate(num_models, background)
   m <- multiple_models_fit(x, p, verbose = FALSE)
   expect_equal(length(m), num_models)
@@ -34,7 +34,7 @@ test_that("Multiple models and related functions", {
   expect_all_true(test_maxent)
 
   # Wrong fits.
-  x <- replicate(num_models, presence_Earborea)
+  x <- replicate(num_models, presence_data)
   p <- replicate(7, background)
   expect_error(multiple_models_fit(x, p, verbose = FALSE))
 
@@ -42,4 +42,5 @@ test_that("Multiple models and related functions", {
   expect_error(multiple_models_fit(x, p, method = "nothing", verbose = FALSE))
   expect_error(multiple_models_fit(x, p, args = "nothing", verbose = FALSE))
   expect_error(multiple_models_fit(x, p, control = list(), verbose = FALSE))
+
 })

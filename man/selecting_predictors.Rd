@@ -10,6 +10,6 @@ selecting_predictors(save = TRUE)
 Title
 }
 \examples{
-# Read predictor data.
-# Extract predictors at 'p' locations.
+Read predictor data.
+Extract predictors at 'p' locations.
 }

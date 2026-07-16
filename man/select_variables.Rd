@@ -47,7 +47,7 @@ points(c(0, 13), c(.95, .95), type = "l", lty = 2, lwd = 2)
 
 folder <- "C:/imidra"
 species <- "Cistus ladanifer"
-p <- get_presence(folder, species)
+p <- get_presence(folder, species, "EPSG:25830"))
 
 # Absolute paths to files.
 carpetas <- list(mdt = file.path("C:/imidra", "mdt/mdt_madrid.tif"),

@@ -53,7 +53,8 @@
 select_variables <- function(x, stability = TRUE, B = 50, k = NULL, cutoff = NULL, verbose = TRUE) {
 
   # Checks.
-  if (!is.data.frame(x)) df <- as.data.frame(x)
+  if (!("SpatVector" %in% class(x))) cli::cli_abort("Input 'x' must be a 'SpatVector' object")
+  df <- as.data.frame(x)[, !(names(x) %in% c("id_unique_code", "plot"))]
   if (is.null(cutoff)) cutoff <- .95
 
 

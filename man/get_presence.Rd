@@ -4,25 +4,24 @@
 \alias{get_presence}
 \title{Title}
 \usage{
-get_presence(folder, species, ifn = 4, verbose = TRUE)
+get_presence(path, species, crs = NULL, verbose = TRUE)
 }
 \arguments{
-\item{folder}{\code{character} string indicating the root folder to retrieve the data from.}
+\item{path}{\code{character} string indicating the path to the file with the data..}
 
 \item{species}{\code{character} string with the full name of the species.}
-
-\item{ifn}{\code{numeric} value indicating which IFN to read. It can be equal to 2, 3 or 4.}
 }
 \value{
-An "sf" object containing presence data for the species.
+An "SpatVector" object containing presence data for the species.
 }
 \description{
 Title
 }
 \examples{
-folder <- "C:/imidra"
+# Madrid data.
+path <- "C:/imidra/ifn/ifn4_28.rds"
 species <- "Cistus ladanifer"
 species <- "Erica arborea"
-x <- get_presence(folder, species)
+x <- get_presence(path, species, "EPSG:25830")
 
 }
