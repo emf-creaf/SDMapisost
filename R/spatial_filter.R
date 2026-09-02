@@ -2,14 +2,12 @@
 #'
 #' @param p
 #' @param min_dist \code{numeric} value, minimum distance in Km.
-#' @param crs
-#' @param num_simu
 #'
 #' @returns
 #' @export
 #'
 #' @examples
-spatial_filter <- function(p, min_dist = 1, num_simu = 10) {
+spatial_filter <- function(p, min_dist = 1) {
 
   # Checks.
   if (!is(p, "SpatVector")) cli::cli_abort("Input 'p' must be a SpatVect object")

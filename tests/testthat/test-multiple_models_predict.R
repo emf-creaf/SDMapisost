@@ -36,7 +36,12 @@ test_that("Predicting with a list of models", {
   # Correct predictions.
   pp <- lapply(1:num_models, function(i) rbind(x[[i]], p[[i]]))
   pr <- multiple_models_predict(m, pp)
-  expect_true(all(pr[, -1] == pr[, 1]))
+  expect_true(inherits(pr, "SpatVector"))
+  pr_df <- as.data.frame(pr)
+  expect_true(all((pr_df[, -1] == pr_df[, 1]) > 0, na.rm = TRUE))
+  expect_equal(nrow(pp[[1]]), nrow(pr_df))
+
+
 
 
 })

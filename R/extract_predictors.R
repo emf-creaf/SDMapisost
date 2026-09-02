@@ -38,6 +38,7 @@ extract_predictors <- function(p, x, verbose = TRUE) {
     if (length(y) > 0) {
       if (!all_named(y)) cli::cli_abort(paste0("All elements in the ", i, " element of input list 'x', if they exist, must have a name"))
       for (j in names(y)) {
+        if (inherits(y[[j]], "PackedSpatRaster")) y[[j]] <- terra::unwrap(y[[j]])
         if (!terra::same.crs(p, y[[j]])) cli::cli_abort("All elements in 'x' and 'p' must have the same crs")
       }
     }
@@ -51,6 +52,7 @@ extract_predictors <- function(p, x, verbose = TRUE) {
       y <- x[[i]]
       for (j in names(y)) {
         if (verbose) cli::cli_alert_info(paste0(" -> ", j))
+        if (inherits(y[[j]], "PackedSpatRaster")) y[[j]] <- terra::unwrap(y[[j]])
         method <- ifelse(is.factor(y[[j]]), "simple", "bilinear")
         p[[j]] <- terra::extract(y[[j]], p, ID = FALSE, method = method)
       }

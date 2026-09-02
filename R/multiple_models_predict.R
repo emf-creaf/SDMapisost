@@ -1,3 +1,12 @@
+#' Title
+#'
+#' @param m
+#' @param p
+#'
+#' @returns
+#' @export
+#'
+#' @examples
 multiple_models_predict <- function(m, p) {
 
 
@@ -17,6 +26,8 @@ multiple_models_predict <- function(m, p) {
 
   # Evaluate at p.
   pr <- sapply(1:length(m), function(i) .model_predict(m[[i]], p[[i]]))
+  q <- p[[1]]
+  terra::values(q) <- pr
 
-  return(pr)
+  return(q)
 }

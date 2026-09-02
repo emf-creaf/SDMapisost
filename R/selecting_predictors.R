@@ -13,7 +13,7 @@ selecting_predictors <- function(save = TRUE) {
 
   # Absolute paths to files.
   path <- list(terrain = file.path("C:/imidra/mdt/mdt_madrid.tif"),
-               climate = file.path("C:/imidra/bioclim", paste0("historico/wc2.1_10m_bio/wc2.1_10m_bio_", 1:19, ".tif")),
+               climate = file.path("C:/imidra/bioclim", paste0("historico/wc2.1_30s_bio/wc2.1_30s_bio_", 1:19, ".tif")),
                categorical = list(corine = file.path("C:/imidra/corine/corine_2018/CORINE Madrid nivel 1.tif")),
                distances = list(hydro = file.path("C:/imidra/hidro/distancia_hidro.tif")))
   names(path$climate) <- paste0("bioclim_", 1:19)

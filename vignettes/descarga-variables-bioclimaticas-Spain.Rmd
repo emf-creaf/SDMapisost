@@ -28,9 +28,10 @@ La extensión geográfica de este trabajo se encajará dentro de los límites de
 
 ```{r Madrid}
 # install.packages("mapSpain", "sf", "terra")
-limites_madrid <- mapSpain::esp_get_ccaa("Madrid", year = "2024",
-                                        epsg = "4258", resolution = "01") |>
-  sf::st_geometry() |>
+espa_prov <- mapSpain::esp_get_prov()
+limites_peninsula <- espa_prov |>
+  dplyr::filter(!ine.prov.name %in% c("Santa Cruz de Tenerife", "Palmas, Las", "Ceuta", "Melilla", "Balears, Illes" ))
+limites_peninsula <- sf::st_union(limites_peninsula) |>
   terra::vect()
 ```
 
@@ -47,7 +48,7 @@ La descarga se realizará directamente a un directorio local de nuestro ordenado
 
 ```{r get_historico_zip, echo = TRUE, eval = TRUE}
 # Modificar la carpeta destino a conveniencia.
-destino <- "C:/imidra/bioclim/historico"
+destino <- "C:/imidra/peninsula/bioclim/historico"
 
 # URL para descargar el zip con todas las variables. Recuerde que la resolución espacial
 # más detallada, y que deberíamos usar en nuestro estudio, es la de 30 segundos de arco.
@@ -56,9 +57,9 @@ destino <- "C:/imidra/bioclim/historico"
 url_hist <- paste0("https://geodata.ucdavis.edu/climate/worldclim/2_1/base/wc2.1_30s_bio.zip")
 
 # Descarga de las variables climáticas y decompresión del archivo zip.
-r <- curl::curl_download(url = url_hist,
+r <- curl::multi_download(url = url_hist,
                          destfile = file.path(destino, basename(url_hist)),
-                         quiet = FALSE)
+                         progress = TRUE)
 unzip(file.path(destino, basename(url_hist)),
       exdir = file.path(destino, tools::file_path_sans_ext(basename(url_hist))))
 file.remove(file.path(destino, basename(url_hist)))
@@ -66,22 +67,28 @@ file.remove(file.path(destino, basename(url_hist)))
 # Bucle para recortar cada ráster a los límites de la CCAA de Madrid.
 carpeta <- file.path(destino, tools::file_path_sans_ext(basename(url_hist)))
 lista_archivos <- list.files(carpeta)
+cli::cli_progress_bar("Recortando rásteres", total = length(lista_archivos))
 for (i in lista_archivos) {
 
+  cli::cli_progress_update()
+  
   # Leer ráster.
   r <- terra::rast(file.path(carpeta, i))
 
-  # Reproyectar polígono, pero solo una vez.
-  if (i == lista_archivos[1]) p <- terra::project(limites_madrid, terra::crs(r))
+  # Reproyectar polígono, pero solo si hace falta.
+  if (!terra::same.crs(limites_peninsula, r)) {
+    limites_peninsula <- terra::project(limites_peninsula, terra::crs(r))
+  }
 
   # Recorta y enmascara el ráster.
     r <- r |>
-      terra::crop(p, snap = "out") |>
-      terra::mask(p)
+      terra::crop(limites_peninsula, snap = "out") |>
+      terra::mask(limites_peninsula)
 
   # Guardar en disco con el mismo nombre.
   terra::writeRaster(r, file.path(carpeta, i), overwrite = TRUE)
 }
+cli::cli_progress_done()
 ```
 
 ## Variables para escenarios climáticos futuros
@@ -94,7 +101,7 @@ A continuación se muestra cómo descargar las variables climáticas con resoluc
 
 ```{r get_futuro_zip, echo = TRUE, eval = TRUE}
 # Modificar la carpeta destino a conveniencia.
-destino <- "C:/imidra/bioclim/futuro"
+destino <- "C:/imidra/peninsula/bioclim/futuro"
 
 # URL raiz para datos con 10 minutos de arco. ¡Cambiar "10m" por "30s".
 url_futuro <- "https://geodata.ucdavis.edu/cmip6/30s/"
@@ -149,16 +156,15 @@ for (modelo in modelos_GCM) {
         # Leer ráster.
         r <- terra::rast(file.path(dest3, basename(url3)))
 
-        # Reproyectar polígono, pero solo una vez.
-        if (reprojectar) {
-          p <- terra::project(limites_madrid, terra::crs(r))
-          reprojectar <- FALSE
+        # Reproyectar polígono, pero solo si hace falta.
+        if (!terra::same.crs(limites_peninsula, r)) {
+          limites_peninsula <- terra::project(limites_peninsula, terra::crs(r))
         }
         
         # Recorta y enmascara el ráster.
         r <- r |>
-          terra::crop(p, snap = "out") |>
-          terra::mask(p)
+          terra::crop(limites_peninsula, snap = "out") |>
+          terra::mask(limites_peninsula)
         
         # Guardar en disco con el mismo nombre.
         terra::writeRaster(r, file.path(dest3, basename(url3)), overwrite = TRUE)
@@ -169,75 +175,3 @@ for (modelo in modelos_GCM) {
 ```
 
 
-A continuación reproyectamos las variables para que estén en el sistema de referencia EPSG:25830, como el resto de variables. Primero las variables históricas.
-
-
-```{r reproject_historic, echo = TRUE, eval = TRUE}
-destino <- "C:/imidra/bioclim/historico/wc2.1_10m_bio"
-lista_archivos <- list.files(destino)
-for (i in lista_archivos) {
-
-  # Leer ráster.
-  r <- terra::rast(file.path(destino, i))
-  
-  # Reproyectamos.
-  r <- terra::project(r, "EPSG:25830")
-
-  # Guardamos en disco con el mismo nombre.
-  terra::writeRaster(r, file.path(destino, i), overwrite = TRUE)
-}
-```
-
-
-A continuación las variables futuras.
-
-```{r reproject_future, echo = TRUE, eval = TRUE}
-
-# Modelos Global Change Model disponibles. Seleccionaremos tan solo aquellos que
-# tienen completos los 4 escenarios climáticos.
-modelos_GCM <- c("ACCESS-CM2", "BCC-CSM2-MR",
-            "CMCC-ESM2", "EC-Earth3-Veg",
-            "GISS-E2-1-G", "INM-CM5-0", "IPSL-CM6A-LR",
-            "MIROC6", "MPI-ESM1-2-HR", "MRI-ESM2-0", "UKESM1-0-LL")
-
-# Shared Socio-economic Pathways disponibles.
-escenarios_SSP <- c("ssp126", "ssp245", "ssp370", "ssp585")
-
-# Periodos temporales disponibles.
-periodos_temporales <- c("2021-2040", "2041-2060", "2061-2080", "2081-2100")
-# Bucle de modelos.
-for (modelo in modelos_GCM) {
-
-  # URL origen y carpeta destino.
-  url1 <- paste0(url_futuro, modelo, "/")
-  dest1 <- file.path(destino, modelo)
-  dir.create(dest1, showWarnings = FALSE)
-  
-  # Bucle de escenarios climáticos.
-  for (escenario in escenarios_SSP) {
-
-    # URL origen y carpeta destino
-    url2 <- paste0(url1, escenario, nombre_raiz, modelo, "_", escenario, "_")
-    dest2 <- file.path(destino, modelo, escenario)
-    dir.create(dest2, showWarnings = FALSE)
-
-    # Bucle de periodos temporales.
-    for (periodo in periodos_temporales) {
-
-      # URL origen y carpeta destino.
-      url3 <- paste0(url2, periodo, ".tif")
-      dest3 <- file.path(destino, modelo, escenario, periodo)
-
-      # Leyendo archivo.
-      r <- terra::rast(file.path(dest3, basename(url3)))
-      
-      # Reproyección.
-      r <- terra::project(r, "EPSG:25830")
-      
-      # Guardando en disco.
-      terra::writeRaster(r, file.path(dest3, basename(url3)), overwrite = TRUE)
-      
-    }
-  }
-}
-```

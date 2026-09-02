@@ -25,12 +25,15 @@ model_predict <- function(m, p, control = NULL, args = NULL) {
 
 .model_predict <- function(m, p, control, args) {
 
+  # NA's are removed during computation, such that output has the same number of rows as input.
   df <- as.data.frame(p)
-  pr <- switch(class(m),
+  valid_rows <- complete.cases(df)
+  preds <- rep(NA, nrow(df))
+  preds[valid_rows] <- switch(class(m),
                MaxEnt = dismo::predict(m, df),
                ranger = ranger::predict(m, df)
   )
 
-  return(pr)
+  return(preds)
 
 }

@@ -26,7 +26,7 @@ validating_maxent <- function(nbackground = 10000) {
   num_points <- setNames(c(1000), min_distance)
 
   # Number of simulations.
-  num_simu <- 20
+  num_simu <- 50
   num_null <- 100
 
   # Proportion of training points.
