@@ -10,7 +10,11 @@
 #' @examples
 #' # Madrid data.
 #' path <- "C:/imidra/ifn/ifn4_28.rds"
-#' species <- "Cistus ladanifer"
+#' species <- "Erica arborea"
+#' x <- get_presence(path, species, "EPSG:25830")
+#'
+#' # Spanish peninsula data.
+#' path <- "C:/imidra/peninsula/ifn/"
 #' species <- "Erica arborea"
 #' x <- get_presence(path, species, "EPSG:25830")
 #'
@@ -22,8 +26,33 @@ get_presence <- function(path, species, crs = NULL, verbose = TRUE) {
   if (!is.null(crs)) if (!is_valid_epsg(crs)) cli::cli_abort("Wrong 'crs' code or invalid syntax")
 
 
-  # Read file and check its crs.
-  df <- readRDS(path)
+  # Read single file, or all files in the folder, and check its/their crs.
+  if (file.info(path)$isdir) {
+    # Find all .rds files in the folder
+    files <- list.files(
+      path = path,
+      pattern = "\\.rds$",
+      full.names = TRUE,
+      ignore.case = TRUE,
+      recursive = recursive
+    )
+
+    if (length(files) == 0) {
+      cli::cli_alert_warning(paste0("No .rds files found in directory: ", path))
+      return(list())
+    }
+
+    results <- lapply(files, readRDS)
+    names(results) <- basename(files)
+    return(results)
+
+  } else {
+    df <- readRDS(path)
+  }
+
+
+browser()
+
   df_crs <- paste0("epsg:", df$crs[1])
   if (!is_valid_epsg(df_crs)) cli::cli_abort("Wrong 'crs' code or invalid syntax in IFN data")
 
