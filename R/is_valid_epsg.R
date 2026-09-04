@@ -1,9 +1,10 @@
-# Check for a valid EPSG code.
-
-#' Title
+#' Check for a valid EPSG code
+#'
+#' @description
+#' \code{is_valid_epsg} checks whether a EPSG input code is valid.#'
 #'
 #' @param code \code{character} vector where each element consists of 'epsg:####' or 'EPSG:####' strings,
-#' where #### is a valid EPSG numeric code.
+#' where #### is a valid 4 or 5-digit EPSG numeric code.
 #'
 #' @returns
 #' TRUE or FALSE.
@@ -13,11 +14,10 @@
 #' @examples
 #' is_valid_epsg("epsg:3")
 #' is_valid_epsg("epsg:4286")
-#'
-#' # FALSE
 #' is_valid_epsg("3")
-#'
 #' is_valid_epsg(c("epsg:4326", "epsg:25830", "EPSG:3035", "4326", "epsg:999999"))
+#' # is_valid_epsg(3) # Error!
+#'
 is_valid_epsg <- function(code) {
 
   # Check input.
