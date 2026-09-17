@@ -1,13 +1,23 @@
-#' Title
+#' EXtract single occurrence file
+#'
+#' @description
+#' \code{extract_occurrence} extracts occurrence data from a single IFN data file
+#' and for a single species. That occurrence data can be for a tree, shrub, herb and
+#' regenerate species.
 #'
 #' @param path \code{character} string indicating the path to the file with the data..
 #' @param species \code{character} string with the full name of the species.
-#' @param target
-#' @param verbose
+#' @param target \code{character} string specifying what to extract. It can be
+#' "tree", "shrub", "herbs" or "regen".
+#' @param verbose \code{logical} variable, if set to TRUE (default) progress information
+#' is shown on screen.
 #'
-#' @returns
+#' @returns description
 #' A \code{data.frame} containing a logical column labelled "occurrence".
-#' All other columns are taken from the ".rds" file.
+#' All other columns are the same that are found in the original ".rds" file.
+#'
+#' @details
+#' Straightforward.
 #'
 #' @export
 #'
@@ -24,7 +34,7 @@ extract_occurrence <- function(path, species, target = "tree", verbose = TRUE) {
     cli::cli_abort("Only one path is allowed")
   }
   if (!file.exists(path)) {
-    cli::cli_abort("Wrong input path")
+    cli::cli_abort(paste0("Wrong input path ", path))
   }
 
   if (!(is.character(species) & length(species) == 1)) {
@@ -46,7 +56,7 @@ extract_occurrence <- function(path, species, target = "tree", verbose = TRUE) {
 
 
   # Extract shrub occurrence data for species.
-  if (verbose) cli::cli_alert_info(paste0("Retreaving ", target, " occurrence data for ", species))
+  if (verbose) cli::cli_alert_info(paste0("Retreving ", target, " occurrence data for ", species))
 
   # Select element.
   dat <- dat |>
@@ -73,6 +83,7 @@ extract_occurrence <- function(path, species, target = "tree", verbose = TRUE) {
     any(!is.na(sub_df$sp_name) & tolower(sub_df$sp_name) == species)
   }, FUN.VALUE = logical(1))
   dat[[new_col]] <- NULL
+  dat[["sp_name"]]<- species
 
 
   return(dat)

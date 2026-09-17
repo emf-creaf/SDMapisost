@@ -3,6 +3,8 @@
 export(all_named)
 export(check_spatial_correlation)
 export(distance_filter)
+export(extract_occurrence)
+export(extract_occurrence_list)
 export(extract_predictors)
 export(generate_random_points)
 export(get_predictors)

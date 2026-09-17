@@ -2,23 +2,25 @@
 % Please edit documentation in R/is_valid_epsg.R
 \name{is_valid_epsg}
 \alias{is_valid_epsg}
-\title{Title}
+\title{Check for a valid EPSG code}
 \usage{
 is_valid_epsg(code)
 }
 \arguments{
-\item{code}{\code{character} string of the type 'epsg:####', where #### is a valid EPSG numeric code.}
+\item{code}{\code{character} vector where each element consists of 'epsg:####' or 'EPSG:####' strings,
+where #### is a valid 4 or 5-digit EPSG numeric code.}
 }
 \value{
 TRUE or FALSE.
 }
 \description{
-Title
+\code{is_valid_epsg} checks whether a EPSG input code is valid.#'
 }
 \examples{
 is_valid_epsg("epsg:3")
 is_valid_epsg("epsg:4286")
-
-# Error.
 is_valid_epsg("3")
+is_valid_epsg(c("epsg:4326", "epsg:25830", "EPSG:3035", "4326", "epsg:999999"))
+# is_valid_epsg(3) # Error!
+
 }

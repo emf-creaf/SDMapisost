@@ -20,7 +20,11 @@ Title
 \examples{
 # Madrid data.
 path <- "C:/imidra/ifn/ifn4_28.rds"
-species <- "Cistus ladanifer"
+species <- "Erica arborea"
+x <- get_presence(path, species, "EPSG:25830")
+
+# Spanish peninsula data.
+path <- "C:/imidra/peninsula/ifn/"
 species <- "Erica arborea"
 x <- get_presence(path, species, "EPSG:25830")
 

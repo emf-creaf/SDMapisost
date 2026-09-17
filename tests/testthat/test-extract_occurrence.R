@@ -1,8 +1,19 @@
 test_that("General tests", {
 
+
   expect_error(extract_occurrence(c("as", "asg")))
   expect_error(extract_occurrence("as", 3))
   expect_error(extract_occurrence("as", "b", "nothing"))
+
+  # Testing with actual data files.
+  path <- paste0(testthat::test_path("data"), "/", "ifn4_20.rds")
+  species <- "Erica arborea"
+
+  # Some tests.
+  x <- extract_occurrence(path, species, "shrub")
+  expect_true(inherits(x, "data.frame"))
+
+  expect_error(extract_occurrence(path, species, "invalid target"))
 
 })
 
